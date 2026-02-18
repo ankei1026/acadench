@@ -2,7 +2,32 @@
 
 import * as React from 'react';
 import { usePage } from '@inertiajs/react';
-import { LayoutGrid, DollarSign as DollarSignIcon, Users, BookOpen, File, Book, Pen, User2, Home, Wallet, BookOpenCheck, BrainCircuitIcon, LineChart, LineChartIcon, LineSquiggleIcon, LucideCornerUpLeft, LucideCornerUpRight, ArrowUp01, ArrowUpCircle, TrendingUp } from 'lucide-react';
+import {
+    LayoutGrid,
+    DollarSign as DollarSignIcon,
+    Users,
+    BookOpen,
+    File,
+    Book,
+    Pen,
+    User2,
+    Home,
+    Wallet,
+    BookOpenCheck,
+    BrainCircuitIcon,
+    LineChart,
+    LineChartIcon,
+    LineSquiggleIcon,
+    LucideCornerUpLeft,
+    LucideCornerUpRight,
+    ArrowUp01,
+    ArrowUpCircle,
+    TrendingUp,
+    BookImageIcon,
+    BookAlert,
+    CreditCard,
+    Video,
+} from 'lucide-react';
 
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
@@ -26,37 +51,48 @@ const adminMainNavItems: NavItem[] = [
         icon: LayoutGrid,
     },
     {
+        title: 'Bookings',
+        href: '/admin/bookings',
+        icon: BookAlert,
+    },
+    {
+        title: 'Lectures',
+        href: '/admin/lectures',
+        icon: Video,
+    },
+    {
+        title: 'Revenue',
+        icon: TrendingUp,
+        items: [
+            { title: 'Revenue Overview', href: '/admin/revenue' },
+            { title: 'Refund Requests', href: '/admin/refund-requests' },
+            { title: 'Payment Types', href: '/admin/payment-setup' },
+        ],
+    },
+    {
         title: 'Programs',
         icon: BrainCircuitIcon,
         items: [
             { title: 'All Programs', href: '/admin/programs' },
             { title: 'Create Program', href: '/admin/programs/create' },
-        ]
-    },
-    {
-        title: 'Revenue',
-        href: '/admin/revenue',
-        icon: TrendingUp,
+        ],
     },
     {
         title: 'Parents',
-        href: '/admin/parents',
         icon: Users,
-    },
-    {
-        title: 'Learners',
-        href: '/admin/learners',
-        icon: BookOpen,
+        items: [
+            { title: 'All Parents', href: '/admin/parents' },
+            { title: 'Learners', href: '/admin/learners' },
+        ],
     },
     {
         title: 'Tutors',
-        href: '/admin/tutors',
         icon: Users,
-    },
-    {
-        title: 'Tutor Applications',
-        href: '/admin/tutor-applications',
-        icon: File,
+        items: [
+            { title: 'All Tutors', href: '/admin/tutors' },
+            { title: 'Create Tutor', href: '/admin/tutors/create' },
+            { title: 'Tutor Applications', href: '/admin/tutor-applications' },
+        ],
     },
 ];
 
@@ -94,14 +130,22 @@ const parentMainNavItems: NavItem[] = [
         href: '/parent/learner',
         icon: BookOpenCheck,
         items: [
-            { title: 'Learner Profiles', href: '/parent/learner/profiles' },
+            { title: 'Learner Profiles', href: '/parent/learners' },
             { title: 'Create Learner', href: '/parent/learner/create' },
         ],
     },
     {
-        title: 'Book Tutor',
-        href: '/parent/book-tutor',
+        title: 'Tutors',
+        href: '/parent/tutors',
+        icon: BookOpenCheck,
+    },
+    {
+        title: 'Book Program',
         icon: Book,
+        items: [
+            { title: 'Book a Program', href: '/parent/book-program' },
+            { title: 'My Bookings', href: '/parent/book-program/bookings' },
+        ],
     },
     {
         title: 'Lectures',
@@ -110,8 +154,11 @@ const parentMainNavItems: NavItem[] = [
     },
     {
         title: 'Request Refund',
-        href: '/parent/request-refund',
         icon: Wallet,
+        items: [
+            { title: 'Request Refund', href: '/parent/request-refund' },
+            { title: 'My Requests', href: '/parent/my-refund-requests' },
+        ],
     },
 ];
 

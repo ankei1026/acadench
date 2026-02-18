@@ -8,23 +8,29 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardFooter,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, ChevronLeft, Check, Loader2, GraduationCap, BookOpen, Users, Clock, DollarSign, Sparkles, Star, Award, Target, Zap, AlertCircle, Info, CheckCircle } from 'lucide-react';
+import {
+    ChevronRight,
+    ChevronLeft,
+    Check,
+    Loader2,
+    GraduationCap,
+    BookOpen,
+    Users,
+    Clock,
+    DollarSign,
+    Sparkles,
+    Star,
+    Award,
+    Target,
+    Zap,
+    AlertCircle,
+    Info,
+    CheckCircle,
+    Coins,
+} from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import HomeHeader from './Components/HomeHeader';
 
@@ -220,46 +226,11 @@ const REASONS_LOVING_TEACHING = [
     'Personal fulfillment',
     'Career growth',
 ];
-const TEACHING_VALUES = [
-    'Patience',
-    'Creativity',
-    'Empathy',
-    'Discipline',
-    'Communication',
-    'Adaptability',
-];
-const APPLICATION_REASONS = [
-    'Financial need',
-    'Career transition',
-    'Passion for teaching',
-    'Flexible hours',
-    'Gain experience',
-    'Supplement income',
-];
-const OUTSIDE_ACTIVITIES = [
-    'Sports',
-    'Music',
-    'Art',
-    'Reading',
-    'Games',
-    'Outdoor activities',
-];
-const TOYS_GAMES = [
-    'Board games',
-    'Card games',
-    'Sports equipment',
-    'Art supplies',
-    'Puzzles',
-    'Educational apps',
-];
-const ANNOYANCES = [
-    'Noise',
-    'Messiness',
-    'Disruptive behavior',
-    'Late arrivals',
-    'Lack of focus',
-    'Parent interference',
-];
+const TEACHING_VALUES = ['Patience', 'Creativity', 'Empathy', 'Discipline', 'Communication', 'Adaptability'];
+const APPLICATION_REASONS = ['Financial need', 'Career transition', 'Passion for teaching', 'Flexible hours', 'Gain experience', 'Supplement income'];
+const OUTSIDE_ACTIVITIES = ['Sports', 'Music', 'Art', 'Reading', 'Games', 'Outdoor activities'];
+const TOYS_GAMES = ['Board games', 'Card games', 'Sports equipment', 'Art supplies', 'Puzzles', 'Educational apps'];
+const ANNOYANCES = ['Noise', 'Messiness', 'Disruptive behavior', 'Late arrivals', 'Lack of focus', 'Parent interference'];
 const WORKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 // Custom Hooks
@@ -276,11 +247,14 @@ const useFormSteps = (totalSteps: number) => {
         setCurrentStep((prev) => Math.max(prev - 1, 1));
     }, []);
 
-    const goToStep = useCallback((step: number) => {
-        if (step <= Math.max(...Array.from(completedSteps), 0) + 2 && step >= 1) {
-            setCurrentStep(step);
-        }
-    }, [completedSteps]);
+    const goToStep = useCallback(
+        (step: number) => {
+            if (step <= Math.max(...Array.from(completedSteps), 0) + 2 && step >= 1) {
+                setCurrentStep(step);
+            }
+        },
+        [completedSteps],
+    );
 
     const progress = ((currentStep - 1) / (totalSteps - 1)) * 100;
 
@@ -314,14 +288,12 @@ const FormField = ({
     <div className={cn('space-y-2', className)}>
         <Label className="flex items-center gap-1">
             {label}
-            {required && <span className="text-red-500 ml-1">*</span>}
-            {error && <AlertCircle className="h-3 w-3 text-red-500 ml-1" />}
+            {required && <span className="ml-1 text-red-500">*</span>}
+            {error && <AlertCircle className="ml-1 h-3 w-3 text-red-500" />}
         </Label>
-        <div className={cn('relative', error && 'border-red-300 rounded-lg')}>
-            {children}
-        </div>
+        <div className={cn('relative', error && 'rounded-lg border-red-300')}>{children}</div>
         {error && (
-            <p className="text-xs text-red-500 flex items-center gap-1">
+            <p className="flex items-center gap-1 text-xs text-red-500">
                 <AlertCircle className="h-3 w-3" />
                 {error}
             </p>
@@ -369,17 +341,14 @@ const RatingInput = ({
                     key={num}
                     type="button"
                     variant={value >= num ? 'default' : 'outline'}
-                    className={cn(
-                        'h-10 w-10 transition-all',
-                        value >= num ? 'bg-yellow-400 text-black hover:bg-yellow-500' : ''
-                    )}
+                    className={cn('h-10 w-10 transition-all', value >= num ? 'bg-yellow-400 text-black hover:bg-yellow-500' : '')}
                     onClick={() => onChange(num)}
                 >
                     {num}
                 </Button>
             ))}
         </div>
-        <div className="flex justify-between text-xs text-gray-500 mt-1">
+        <div className="mt-1 flex justify-between text-xs text-gray-500">
             <span>Low</span>
             <span>High</span>
         </div>
@@ -455,8 +424,7 @@ const RadioGroup = ({
 // Main Component
 export default function TutorApplication() {
     const [showForm, setShowForm] = useState(false);
-    const { currentStep, completedSteps, goToNext, goToPrev, goToStep, progress, isFirstStep, isLastStep } =
-        useFormSteps(FORM_STEPS.length);
+    const { currentStep, completedSteps, goToNext, goToPrev, goToStep, progress, isFirstStep, isLastStep } = useFormSteps(FORM_STEPS.length);
 
     const { data, setData, post, processing, errors, reset } = useForm<FormData>({
         // Personal Information
@@ -552,222 +520,214 @@ export default function TutorApplication() {
     // Step validation
     const [stepErrors, setStepErrors] = useState<Record<number, string[]>>({});
 
-    const validateStep = useCallback((step: number): boolean => {
-        const errors: string[] = [];
-        switch (step) {
-            case 1:
-                if (!data.full_name.trim()) errors.push('Full Name is required');
-                if (!data.email.trim()) errors.push('Email is required');
-                if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) errors.push('Email is invalid');
-                if (!data.birthdate.trim()) errors.push('Birthdate is required');
-                if (!data.age.trim()) errors.push('Age is required');
-                if (!data.gender.trim()) errors.push('Gender is required');
-                if (!data.home_address.trim()) errors.push('Home Address is required');
-                if (!data.phone.trim()) errors.push('Phone Number is required');
-                if (!data.contact_number.trim()) errors.push('Contact Number is required');
-                if (!data.facebook_link.trim()) errors.push('Facebook Link is required');
-                if (!data.mother_name.trim()) errors.push('Mother Name is required');
-                if (!data.father_name.trim()) errors.push('Father Name is required');
-                if (!data.living_status.trim()) errors.push('Living Status is required');
-                break;
-            case 2:
-                if (!data.high_school.trim()) errors.push('High School is required');
-                if (!data.college_school.trim()) errors.push('College/University is required');
-                if (!data.college_course.trim()) errors.push('College Course is required');
-                if (data.is_licensed_teacher && !data.license_date.trim()) errors.push('License Date is required');
-                break;
-            case 3:
-                if (!data.employment_status.trim()) errors.push('Employment Status is required');
-                const showEmployerFields = ['employed', 'freelance', 'business_owner'].includes(data.employment_status);
-                if (showEmployerFields) {
-                    if (!data.current_employer.trim()) errors.push('Current Employer is required');
-                    if (!data.working_hours.trim()) errors.push('Working Hours is required');
-                }
-                if (data.tutoring_experience_levels.length === 0) errors.push('Select at least one tutoring experience level');
-                if (!data.tutoring_experience_duration.trim()) errors.push('Tutoring Experience Duration is required');
-                if (data.has_school_teaching_experience) {
-                    if (!data.school_teaching_experience_duration.trim()) errors.push('School Teaching Experience Duration is required');
-                    if (!data.previous_clients.trim()) errors.push('Previous Clients is required');
-                }
-                break;
-            case 4:
-                if (!data.favorite_subject_to_teach.trim()) errors.push('Favorite Subject is required');
-                if (!data.easiest_subject_to_teach.trim()) errors.push('Easiest Subject is required');
-                if (!data.most_difficult_subject_to_teach.trim()) errors.push('Most Difficult Subject is required');
-                if (!data.easier_school_level_to_teach.trim()) errors.push('Easier School Level is required');
-                if (!data.harder_school_level_to_teach.trim()) errors.push('Harder School Level is required');
-                if (data.reasons_love_teaching.length === 0) errors.push('Select at least one reason for loving teaching');
-                if (!data.work_preference.trim()) errors.push('Work Preference is required');
-                if (!data.class_size_preference.trim()) errors.push('Class Size Preference is required');
-                if (data.teaching_values.length === 0) errors.push('Select at least one teaching value');
-                if (data.application_reasons.length === 0) errors.push('Select at least one application reason');
-                if (data.outside_activities.length === 0) errors.push('Select at least one outside activity');
-                break;
-            case 5:
-                if (!data.distance_from_hub_minutes.trim()) errors.push('Distance from Hub is required');
-                if (!data.distance_from_work_minutes.trim()) errors.push('Distance from Work is required');
-                if (!data.transportation_mode.trim()) errors.push('Transportation Mode is required');
-                break;
-            case 6:
-                if (data.enjoy_playing_with_kids_rating < 1) errors.push('Enjoy playing with kids rating is required');
-                if (data.need_job_rating < 1) errors.push('Need job rating is required');
-                if (data.public_speaking_rating < 1) errors.push('Public speaking rating is required');
-                if (data.penmanship_rating < 1) errors.push('Penmanship rating is required');
-                if (data.creativity_rating < 1) errors.push('Creativity rating is required');
-                if (data.english_proficiency_rating < 1) errors.push('English proficiency rating is required');
-                if (!data.preferred_teaching_language.trim()) errors.push('Preferred Teaching Language is required');
-                if (data.preferred_toys_games.length === 0) errors.push('Select at least one preferred toy/game');
-                if (data.annoyances.length === 0) errors.push('Select at least one annoyance');
-                break;
-            case 7:
-                if (!data.edtech_opinion.trim()) errors.push('EdTech Opinion is required');
-                if (data.needs_phone_while_teaching && !data.phone_usage_reason.trim()) errors.push('Phone usage reason is required');
-                if (!data.teaching_difficulty_approach.trim()) errors.push('Teaching difficulty approach is required');
-                if (!data.discipline_approach.trim()) errors.push('Discipline approach is required');
-                if (data.approves_late_fine_reward && !data.late_fine_reason.trim()) errors.push('Late fine reason is required');
-                if (!data.expected_tenure.trim()) errors.push('Expected Tenure is required');
-                break;
-            case 8:
-                if (data.preferred_workdays.length === 0) errors.push('Select at least one preferred workday');
-                if (!data.preferred_workdays_frequency.trim()) errors.push('Work Frequency is required');
-                if (!data.preferred_schedule.trim()) errors.push('Preferred Schedule is required');
-                break;
-            case 9:
-                if (data.cleanliness_importance_rating < 1) errors.push('Cleanliness Importance rating is required');
-                if (data.organization_importance_rating < 1) errors.push('Organization Importance rating is required');
-                if (data.shared_environment_comfort_rating < 1) errors.push('Shared Environment Comfort rating is required');
-                if (!data.teaching_style_preference.trim()) errors.push('Teaching Style Preference is required');
-                if (!data.recording_comfort.trim()) errors.push('Recording Comfort is required');
-                break;
-            case 10:
-                if (!data.subject.trim()) errors.push('Subject is required');
-                if (!data.document_path) errors.push('Resume document is required');
-                break;
-        }
-        setStepErrors(prev => ({ ...prev, [step]: errors }));
-        return errors.length === 0;
-    }, [data]);
+    const validateStep = useCallback(
+        (step: number): boolean => {
+            const errors: string[] = [];
+            switch (step) {
+                case 1:
+                    if (!data.full_name.trim()) errors.push('Full Name is required');
+                    if (!data.email.trim()) errors.push('Email is required');
+                    if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) errors.push('Email is invalid');
+                    if (!data.birthdate.trim()) errors.push('Birthdate is required');
+                    if (!data.age.trim()) errors.push('Age is required');
+                    if (!data.gender.trim()) errors.push('Gender is required');
+                    if (!data.home_address.trim()) errors.push('Home Address is required');
+                    if (!data.phone.trim()) errors.push('Phone Number is required');
+                    if (!data.contact_number.trim()) errors.push('Contact Number is required');
+                    if (!data.facebook_link.trim()) errors.push('Facebook Link is required');
+                    if (!data.mother_name.trim()) errors.push('Mother Name is required');
+                    if (!data.father_name.trim()) errors.push('Father Name is required');
+                    if (!data.living_status.trim()) errors.push('Living Status is required');
+                    break;
+                case 2:
+                    if (!data.high_school.trim()) errors.push('High School is required');
+                    if (!data.college_school.trim()) errors.push('College/University is required');
+                    if (!data.college_course.trim()) errors.push('College Course is required');
+                    if (data.is_licensed_teacher && !data.license_date.trim()) errors.push('License Date is required');
+                    break;
+                case 3:
+                    if (!data.employment_status.trim()) errors.push('Employment Status is required');
+                    const showEmployerFields = ['employed', 'freelance', 'business_owner'].includes(data.employment_status);
+                    if (showEmployerFields) {
+                        if (!data.current_employer.trim()) errors.push('Current Employer is required');
+                        if (!data.working_hours.trim()) errors.push('Working Hours is required');
+                    }
+                    if (data.tutoring_experience_levels.length === 0) errors.push('Select at least one tutoring experience level');
+                    if (!data.tutoring_experience_duration.trim()) errors.push('Tutoring Experience Duration is required');
+                    if (data.has_school_teaching_experience) {
+                        if (!data.school_teaching_experience_duration.trim()) errors.push('School Teaching Experience Duration is required');
+                        if (!data.previous_clients.trim()) errors.push('Previous Clients is required');
+                    }
+                    break;
+                case 4:
+                    if (!data.favorite_subject_to_teach.trim()) errors.push('Favorite Subject is required');
+                    if (!data.easiest_subject_to_teach.trim()) errors.push('Easiest Subject is required');
+                    if (!data.most_difficult_subject_to_teach.trim()) errors.push('Most Difficult Subject is required');
+                    if (!data.easier_school_level_to_teach.trim()) errors.push('Easier School Level is required');
+                    if (!data.harder_school_level_to_teach.trim()) errors.push('Harder School Level is required');
+                    if (data.reasons_love_teaching.length === 0) errors.push('Select at least one reason for loving teaching');
+                    if (!data.work_preference.trim()) errors.push('Work Preference is required');
+                    if (!data.class_size_preference.trim()) errors.push('Class Size Preference is required');
+                    if (data.teaching_values.length === 0) errors.push('Select at least one teaching value');
+                    if (data.application_reasons.length === 0) errors.push('Select at least one application reason');
+                    if (data.outside_activities.length === 0) errors.push('Select at least one outside activity');
+                    break;
+                case 5:
+                    if (!data.distance_from_hub_minutes.trim()) errors.push('Distance from Hub is required');
+                    if (!data.distance_from_work_minutes.trim()) errors.push('Distance from Work is required');
+                    if (!data.transportation_mode.trim()) errors.push('Transportation Mode is required');
+                    break;
+                case 6:
+                    if (data.enjoy_playing_with_kids_rating < 1) errors.push('Enjoy playing with kids rating is required');
+                    if (data.need_job_rating < 1) errors.push('Need job rating is required');
+                    if (data.public_speaking_rating < 1) errors.push('Public speaking rating is required');
+                    if (data.penmanship_rating < 1) errors.push('Penmanship rating is required');
+                    if (data.creativity_rating < 1) errors.push('Creativity rating is required');
+                    if (data.english_proficiency_rating < 1) errors.push('English proficiency rating is required');
+                    if (!data.preferred_teaching_language.trim()) errors.push('Preferred Teaching Language is required');
+                    if (data.preferred_toys_games.length === 0) errors.push('Select at least one preferred toy/game');
+                    if (data.annoyances.length === 0) errors.push('Select at least one annoyance');
+                    break;
+                case 7:
+                    if (!data.edtech_opinion.trim()) errors.push('EdTech Opinion is required');
+                    if (data.needs_phone_while_teaching && !data.phone_usage_reason.trim()) errors.push('Phone usage reason is required');
+                    if (!data.teaching_difficulty_approach.trim()) errors.push('Teaching difficulty approach is required');
+                    if (!data.discipline_approach.trim()) errors.push('Discipline approach is required');
+                    if (data.approves_late_fine_reward && !data.late_fine_reason.trim()) errors.push('Late fine reason is required');
+                    if (!data.expected_tenure.trim()) errors.push('Expected Tenure is required');
+                    break;
+                case 8:
+                    if (data.preferred_workdays.length === 0) errors.push('Select at least one preferred workday');
+                    if (!data.preferred_workdays_frequency.trim()) errors.push('Work Frequency is required');
+                    if (!data.preferred_schedule.trim()) errors.push('Preferred Schedule is required');
+                    break;
+                case 9:
+                    if (data.cleanliness_importance_rating < 1) errors.push('Cleanliness Importance rating is required');
+                    if (data.organization_importance_rating < 1) errors.push('Organization Importance rating is required');
+                    if (data.shared_environment_comfort_rating < 1) errors.push('Shared Environment Comfort rating is required');
+                    if (!data.teaching_style_preference.trim()) errors.push('Teaching Style Preference is required');
+                    if (!data.recording_comfort.trim()) errors.push('Recording Comfort is required');
+                    break;
+                case 10:
+                    if (!data.subject.trim()) errors.push('Subject is required');
+                    if (!data.document_path) errors.push('Resume document is required');
+                    break;
+            }
+            setStepErrors((prev) => ({ ...prev, [step]: errors }));
+            return errors.length === 0;
+        },
+        [data],
+    );
 
-    const handleNextStep = useCallback((e?: React.MouseEvent<HTMLButtonElement>) => {
-        // Prevent accidental form submission caused by DOM re-render during click
-        if (e) {
-            e.preventDefault();
-            e.stopPropagation();
-        }
+    const handleNextStep = useCallback(
+        (e?: React.MouseEvent<HTMLButtonElement>) => {
+            // Prevent accidental form submission caused by DOM re-render during click
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
 
-        if (validateStep(currentStep)) {
-            goToNext();
-        } else {
-            toast.error('Please fill in all required fields', {
-                style: {
-                    background: '#ef4444',
-                    color: 'white',
-                    border: 'none',
-                },
-            });
-        }
-    }, [currentStep, validateStep, goToNext]);
-
-    const handleCheckboxChange = useCallback((field: keyof FormData, value: string) => {
-        const currentArray = data[field] as string[];
-        const newArray = currentArray.includes(value)
-            ? currentArray.filter((item) => item !== value)
-            : [...currentArray, value];
-        setData(field, newArray as any);
-    }, [data, setData]);
-
-    const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.currentTarget.files?.[0] || null;
-        setData('document_path', file);
-    }, [setData]);
-
-    const handleSubmit = useCallback((e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        post('/tutor-application', {
-            onSuccess: () => {
-                toast.success('Application submitted successfully! We will review it within 2-7 days.', {
+            if (validateStep(currentStep)) {
+                goToNext();
+            } else {
+                toast.error('Please fill in all required fields', {
                     style: {
-                        background: '#10b981',
+                        background: '#ef4444',
                         color: 'white',
                         border: 'none',
                     },
                 });
-                setShowForm(false);
-                reset();
-            },
-            onError: (errors: any) => {
-                // Log full error object for debugging
-                console.error('Submission errors:', errors);
+            }
+        },
+        [currentStep, validateStep, goToNext],
+    );
 
-                // If validation errors provided, show them concisely
-                if (errors && typeof errors === 'object') {
-                    const messages = Object.values(errors).flat().filter(Boolean) as string[];
-                    const message = messages.length ? messages.join(' \n') : 'There was an error submitting your application. Please check the form.';
-                    toast.error(message, {
+    const handleCheckboxChange = useCallback(
+        (field: keyof FormData, value: string) => {
+            const currentArray = data[field] as string[];
+            const newArray = currentArray.includes(value) ? currentArray.filter((item) => item !== value) : [...currentArray, value];
+            setData(field, newArray as any);
+        },
+        [data, setData],
+    );
+
+    const handleFileChange = useCallback(
+        (e: React.ChangeEvent<HTMLInputElement>) => {
+            const file = e.currentTarget.files?.[0] || null;
+            setData('document_path', file);
+        },
+        [setData],
+    );
+
+    const handleSubmit = useCallback(
+        (e: React.FormEvent<HTMLFormElement>) => {
+            e.preventDefault();
+            post('/tutor-application', {
+                onSuccess: () => {
+                    toast.success('Application submitted successfully! We will review it within 2-7 days.', {
                         style: {
-                            background: '#ef4444',
+                            background: '#10b981',
                             color: 'white',
                             border: 'none',
                         },
                     });
-                } else {
-                    toast.error('There was an error submitting your application. Please try again.', {
-                        style: {
-                            background: '#ef4444',
-                            color: 'white',
-                            border: 'none',
-                        },
-                    });
-                }
-            },
-        });
-    }, [post, reset]);
+                    setShowForm(false);
+                    reset();
+                },
+                onError: (errors: any) => {
+                    // Log full error object for debugging
+                    console.error('Submission errors:', errors);
+
+                    // If validation errors provided, show them concisely
+                    if (errors && typeof errors === 'object') {
+                        const messages = Object.values(errors).flat().filter(Boolean) as string[];
+                        const message = messages.length
+                            ? messages.join(' \n')
+                            : 'There was an error submitting your application. Please check the form.';
+                        toast.error(message, {
+                            style: {
+                                background: '#ef4444',
+                                color: 'white',
+                                border: 'none',
+                            },
+                        });
+                    } else {
+                        toast.error('There was an error submitting your application. Please try again.', {
+                            style: {
+                                background: '#ef4444',
+                                color: 'white',
+                                border: 'none',
+                            },
+                        });
+                    }
+                },
+            });
+        },
+        [post, reset],
+    );
 
     // Normal navigation: validate current step and move forward
 
     const renderStep1 = () => (
-        <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="space-y-6"
-        >
+        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
             <FormSection title="Personal Information" description="Tell us about yourself">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <FormField label="Full Name" required error={errors.full_name}>
-                        <Input
-                            placeholder="John Doe"
-                            value={data.full_name}
-                            onChange={(e) => setData('full_name', e.target.value)}
-                        />
+                        <Input placeholder="John Doe" value={data.full_name} onChange={(e) => setData('full_name', e.target.value)} />
                     </FormField>
                     <FormField label="Email" required error={errors.email}>
-                        <Input
-                            type="email"
-                            placeholder="john@example.com"
-                            value={data.email}
-                            onChange={(e) => setData('email', e.target.value)}
-                        />
+                        <Input type="email" placeholder="john@example.com" value={data.email} onChange={(e) => setData('email', e.target.value)} />
                     </FormField>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <FormField label="Birthdate" required error={errors.birthdate}>
-                        <Input
-                            type="date"
-                            value={data.birthdate}
-                            onChange={(e) => setData('birthdate', e.target.value)}
-                        />
+                        <Input type="date" value={data.birthdate} onChange={(e) => setData('birthdate', e.target.value)} />
                     </FormField>
                     <FormField label="Age" required error={errors.age}>
-                        <Input
-                            type="number"
-                            placeholder="25"
-                            value={data.age}
-                            onChange={(e) => setData('age', e.target.value)}
-                        />
+                        <Input type="number" placeholder="25" value={data.age} onChange={(e) => setData('age', e.target.value)} />
                     </FormField>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <FormField label="Gender" required error={errors.gender}>
                         <Select value={data.gender} onValueChange={(value) => setData('gender', value)}>
                             <SelectTrigger>
@@ -804,13 +764,9 @@ export default function TutorApplication() {
                         onChange={(e) => setData('home_address', e.target.value)}
                     />
                 </FormField>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <FormField label="Phone Number" required error={errors.phone}>
-                        <Input
-                            placeholder="+63 912 345 6789"
-                            value={data.phone}
-                            onChange={(e) => setData('phone', e.target.value)}
-                        />
+                        <Input placeholder="+63 912 345 6789" value={data.phone} onChange={(e) => setData('phone', e.target.value)} />
                     </FormField>
                     <FormField label="Contact Number" required error={errors.contact_number}>
                         <Input
@@ -820,7 +776,7 @@ export default function TutorApplication() {
                         />
                     </FormField>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <FormField label="Facebook Link" required error={errors.facebook_link}>
                         <Input
                             placeholder="https://facebook.com/yourprofile"
@@ -829,20 +785,12 @@ export default function TutorApplication() {
                         />
                     </FormField>
                     <FormField label="Mother's Name" required error={errors.mother_name}>
-                        <Input
-                            placeholder="Mother's full name"
-                            value={data.mother_name}
-                            onChange={(e) => setData('mother_name', e.target.value)}
-                        />
+                        <Input placeholder="Mother's full name" value={data.mother_name} onChange={(e) => setData('mother_name', e.target.value)} />
                     </FormField>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <FormField label="Father's Name" required error={errors.father_name}>
-                        <Input
-                            placeholder="Father's full name"
-                            value={data.father_name}
-                            onChange={(e) => setData('father_name', e.target.value)}
-                        />
+                        <Input placeholder="Father's full name" value={data.father_name} onChange={(e) => setData('father_name', e.target.value)} />
                     </FormField>
                 </div>
             </FormSection>
@@ -850,19 +798,10 @@ export default function TutorApplication() {
     );
 
     const renderStep2 = () => (
-        <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="space-y-6"
-        >
+        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
             <FormSection title="Educational Background" description="Your educational history">
                 <FormField label="High School" required error={errors.high_school}>
-                    <Input
-                        placeholder="Your high school"
-                        value={data.high_school}
-                        onChange={(e) => setData('high_school', e.target.value)}
-                    />
+                    <Input placeholder="Your high school" value={data.high_school} onChange={(e) => setData('high_school', e.target.value)} />
                 </FormField>
                 <FormField label="College/University" required error={errors.college_school}>
                     <Input
@@ -872,11 +811,7 @@ export default function TutorApplication() {
                     />
                 </FormField>
                 <FormField label="College Course" required error={errors.college_course}>
-                    <Input
-                        placeholder="Your course/degree"
-                        value={data.college_course}
-                        onChange={(e) => setData('college_course', e.target.value)}
-                    />
+                    <Input placeholder="Your course/degree" value={data.college_course} onChange={(e) => setData('college_course', e.target.value)} />
                 </FormField>
                 <div className="flex items-center space-x-2">
                     <Checkbox
@@ -888,11 +823,7 @@ export default function TutorApplication() {
                 </div>
                 {data.is_licensed_teacher && (
                     <FormField label="License Date" error={errors.license_date}>
-                        <Input
-                            type="date"
-                            value={data.license_date}
-                            onChange={(e) => setData('license_date', e.target.value)}
-                        />
+                        <Input type="date" value={data.license_date} onChange={(e) => setData('license_date', e.target.value)} />
                     </FormField>
                 )}
             </FormSection>
@@ -900,12 +831,7 @@ export default function TutorApplication() {
     );
 
     const renderStep3 = () => (
-        <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="space-y-6"
-        >
+        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
             <FormSection title="Teaching Experience" description="Your tutoring and teaching background">
                 <FormField label="Employment Status" required error={errors.employment_status}>
                     <Select value={data.employment_status} onValueChange={(value) => setData('employment_status', value)}>
@@ -983,14 +909,9 @@ export default function TutorApplication() {
     );
 
     const renderStep4 = () => (
-        <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="space-y-6"
-        >
+        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
             <FormSection title="Preferences & Skills" description="Your teaching preferences and values">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <FormField label="Favorite Subject" required error={errors.favorite_subject_to_teach}>
                         <Input
                             placeholder="e.g., Mathematics"
@@ -1006,7 +927,7 @@ export default function TutorApplication() {
                         />
                     </FormField>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <FormField label="Most Difficult Subject" required error={errors.most_difficult_subject_to_teach}>
                         <Input
                             placeholder="e.g., Physics"
@@ -1072,14 +993,9 @@ export default function TutorApplication() {
     );
 
     const renderStep5 = () => (
-        <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="space-y-6"
-        >
+        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
             <FormSection title="Logistics" description="Your location and transportation">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <FormField label="Distance from Hub (minutes)" required error={errors.distance_from_hub_minutes}>
                         <Input
                             type="number"
@@ -1116,12 +1032,7 @@ export default function TutorApplication() {
     );
 
     const renderStep6 = () => (
-        <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="space-y-6"
-        >
+        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
             <FormSection title="Ratings" description="Self-assessment ratings">
                 <RatingInput
                     label="How much do you enjoy playing with kids?"
@@ -1183,12 +1094,7 @@ export default function TutorApplication() {
     );
 
     const renderStep7 = () => (
-        <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="space-y-6"
-        >
+        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
             <FormSection title="Teaching Methods" description="Your approach to teaching">
                 <RadioGroup
                     label="EdTech Opinion (Required)"
@@ -1264,12 +1170,7 @@ export default function TutorApplication() {
     );
 
     const renderStep8 = () => (
-        <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="space-y-6"
-        >
+        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
             <FormSection title="Commitment" description="Your schedule preferences">
                 <CheckboxGroup
                     label="Preferred Workdays (Required)"
@@ -1310,12 +1211,7 @@ export default function TutorApplication() {
     );
 
     const renderStep9 = () => (
-        <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="space-y-6"
-        >
+        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
             <FormSection title="Work Environment Preferences" description="Your ideal work environment">
                 <RatingInput
                     label="Cleanliness Importance Rating"
@@ -1378,12 +1274,7 @@ export default function TutorApplication() {
     );
 
     const renderStep10 = () => (
-        <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="space-y-6"
-        >
+        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
             <FormSection title="Final Review" description="Submit your application">
                 <FormField label="Subject You Want to Teach" required error={errors.subject}>
                     <Input
@@ -1393,12 +1284,7 @@ export default function TutorApplication() {
                     />
                 </FormField>
                 <FormField label="Resume & Credentials" required error={errors.document_path}>
-                    <Input
-                        type="file"
-                        accept=".pdf"
-                        className="cursor-pointer bg-white"
-                        onChange={handleFileChange}
-                    />
+                    <Input type="file" accept=".pdf" className="cursor-pointer bg-white" onChange={handleFileChange} />
                     <p className="text-xs text-gray-500">
                         Upload your resume (PDF). Format: Lastname, Firstname MiddleInitial
                         <br />
@@ -1407,18 +1293,32 @@ export default function TutorApplication() {
                 </FormField>
                 <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
                     <h4 className="font-semibold">Application Summary</h4>
-                    <div className="mt-2 text-sm space-y-1">
-                        <p><strong>Name:</strong> {data.full_name || 'Not provided'}</p>
-                        <p><strong>Email:</strong> {data.email || 'Not provided'}</p>
-                        <p><strong>Subject:</strong> {data.subject || 'Not provided'}</p>
-                        <p><strong>Employment:</strong> {data.employment_status || 'Not provided'}</p>
+                    <div className="mt-2 space-y-1 text-sm">
+                        <p>
+                            <strong>Name:</strong> {data.full_name || 'Not provided'}
+                        </p>
+                        <p>
+                            <strong>Email:</strong> {data.email || 'Not provided'}
+                        </p>
+                        <p>
+                            <strong>Subject:</strong> {data.subject || 'Not provided'}
+                        </p>
+                        <p>
+                            <strong>Employment:</strong> {data.employment_status || 'Not provided'}
+                        </p>
                         {['employed', 'freelance', 'business_owner'].includes(data.employment_status) && (
                             <>
-                                <p><strong>Current Employer:</strong> {data.current_employer || 'Not provided'}</p>
-                                <p><strong>Working Hours:</strong> {data.working_hours || 'Not provided'}</p>
+                                <p>
+                                    <strong>Current Employer:</strong> {data.current_employer || 'Not provided'}
+                                </p>
+                                <p>
+                                    <strong>Working Hours:</strong> {data.working_hours || 'Not provided'}
+                                </p>
                             </>
                         )}
-                        <p><strong>Experience:</strong> {data.tutoring_experience_duration || 'Not provided'}</p>
+                        <p>
+                            <strong>Experience:</strong> {data.tutoring_experience_duration || 'Not provided'}
+                        </p>
                     </div>
                 </div>
             </FormSection>
@@ -1463,46 +1363,28 @@ export default function TutorApplication() {
                     return (
                         <div
                             key={step.id}
-                            className={cn(
-                                'flex flex-col items-center',
-                                canNavigate ? 'cursor-pointer' : 'cursor-default'
-                            )}
+                            className={cn('flex flex-col items-center', canNavigate ? 'cursor-pointer' : 'cursor-default')}
                             onClick={() => canNavigate && goToStep(step.id)}
                         >
                             <motion.div
                                 initial={false}
                                 animate={{
                                     scale: isCurrent ? 1.1 : 1,
-                                    backgroundColor: isCompleted
-                                        ? '#22c55e'
-                                        : isCurrent
-                                        ? '#facc15'
-                                        : '#e5e7eb',
+                                    backgroundColor: isCompleted ? '#22c55e' : isCurrent ? '#facc15' : '#e5e7eb',
                                 }}
                                 className={cn(
                                     'flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold transition-colors',
-                                    isCompleted ? 'text-white' : isCurrent ? 'text-black' : 'text-gray-500'
+                                    isCompleted ? 'text-white' : isCurrent ? 'text-black' : 'text-gray-500',
                                 )}
                             >
                                 {isCompleted ? <Check className="h-5 w-5" /> : step.id}
                             </motion.div>
-                            <span
-                                className={cn(
-                                    'mt-2 text-[10px]',
-                                    isCurrent ? 'font-semibold text-black' : 'text-gray-500'
-                                )}
-                            >
-                                {step.title}
-                            </span>
+                            <span className={cn('mt-2 text-[10px]', isCurrent ? 'font-semibold text-black' : 'text-gray-500')}>{step.title}</span>
                         </div>
                     );
                 })}
             </div>
-            <motion.div
-                className="mt-3 h-2 rounded-full bg-gray-200 overflow-hidden"
-                initial={false}
-                animate={{ width: '100%' }}
-            >
+            <motion.div className="mt-3 h-2 overflow-hidden rounded-full bg-gray-200" initial={false} animate={{ width: '100%' }}>
                 <motion.div
                     className="h-full rounded-full bg-yellow-400"
                     initial={{ width: 0 }}
@@ -1519,65 +1401,82 @@ export default function TutorApplication() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
-                className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center"
+                className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2"
             >
                 {/* Left Content */}
                 <div>
-                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-yellow-100 text-yellow-800 text-sm font-medium mb-4">
+                    <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-yellow-100 px-4 py-2 text-sm font-medium text-yellow-800">
                         <Sparkles className="h-4 w-4" />
                         Join Our Team of Expert Tutors
                     </div>
 
-                    <h1 className="text-4xl md:text-5xl font-bold text-gray-900 leading-tight">
+                    <h1 className="text-4xl leading-tight font-bold text-gray-900 md:text-5xl">
                         Shape Young Minds,
-                        <span className="block text-yellow-500 mt-1">Earn Your Way</span>
+                        <span className="mt-1 block text-yellow-500">Earn Your Way</span>
                     </h1>
 
-                    <p className="mt-6 text-lg text-gray-700 max-w-xl">
-                        Transform lives through education while building a flexible career that works around your schedule. Join our community of passionate educators.
+                    <p className="mt-6 max-w-xl text-lg text-gray-700">
+                        Transform lives through education while building a flexible career that works around your schedule. Join our community of
+                        passionate educators.
                     </p>
 
                     <div className="mt-8 grid grid-cols-2 gap-4">
-                        <div className="flex items-start gap-3 p-4 rounded-lg bg-white border border-gray-100 shadow-sm">
-                            <div className="p-2 bg-yellow-50 rounded-lg">
+                        <div className="flex items-start gap-3 rounded-lg border border-gray-100 bg-white p-4 shadow-sm">
+                            <div className="rounded-lg bg-yellow-50 p-2">
                                 <BookOpen className="h-5 w-5 text-yellow-500" />
                             </div>
                             <div>
                                 <h4 className="font-semibold text-gray-900">Flexible Subjects</h4>
-                                <p className="text-sm text-gray-600 mt-1">Teach what you love</p>
+                                <p className="mt-1 text-sm text-gray-600">Teach what you love</p>
                             </div>
                         </div>
-                        <div className="flex items-start gap-3 p-4 rounded-lg bg-white border border-gray-100 shadow-sm">
-                            <div className="p-2 bg-yellow-50 rounded-lg">
-                                <DollarSign className="h-5 w-5 text-yellow-500" />
+                        <div className="flex items-start gap-3 rounded-lg border border-gray-100 bg-white p-4 shadow-sm">
+                            <div className="rounded-lg bg-yellow-50 p-2">
+                                <Coins className="h-5 w-5 text-yellow-500" />
                             </div>
                             <div>
                                 <h4 className="font-semibold text-gray-900">Competitive Rates</h4>
-                                <p className="text-sm text-gray-600 mt-1">Set your own price</p>
+                                <p className="mt-1 text-sm text-gray-600">Set your own price</p>
                             </div>
                         </div>
-                        <div className="flex items-start gap-3 p-4 rounded-lg bg-white border border-gray-100 shadow-sm">
-                            <div className="p-2 bg-yellow-50 rounded-lg">
+                        <div className="flex items-start gap-3 rounded-lg border border-gray-100 bg-white p-4 shadow-sm">
+                            <div className="rounded-lg bg-yellow-50 p-2">
                                 <Clock className="h-5 w-5 text-yellow-500" />
                             </div>
                             <div>
                                 <h4 className="font-semibold text-gray-900">Flexible Hours</h4>
-                                <p className="text-sm text-gray-600 mt-1">Work when you want</p>
+                                <p className="mt-1 text-sm text-gray-600">Work when you want</p>
                             </div>
                         </div>
-                        <div className="flex items-start gap-3 p-4 rounded-lg bg-white border border-gray-100 shadow-sm">
-                            <div className="p-2 bg-yellow-50 rounded-lg">
+                        <div className="flex items-start gap-3 rounded-lg border border-gray-100 bg-white p-4 shadow-sm">
+                            <div className="rounded-lg bg-yellow-50 p-2">
                                 <Users className="h-5 w-5 text-yellow-500" />
                             </div>
                             <div>
                                 <h4 className="font-semibold text-gray-900">Team Support</h4>
-                                <p className="text-sm text-gray-600 mt-1">Join our community</p>
+                                <p className="mt-1 text-sm text-gray-600">Join our community</p>
                             </div>
                         </div>
                     </div>
 
+                    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="mt-10">
+                        <Button
+                            onClick={() => setShowForm(true)}
+                            className="w-full rounded-full bg-gradient-to-r from-yellow-400 to-amber-500 px-10 py-6 text-lg font-semibold text-black shadow-lg transition-all duration-300 hover:from-yellow-500 hover:to-amber-600 hover:shadow-xl lg:w-auto"
+                        >
+                            <GraduationCap className="mr-3 h-6 w-6" />
+                            Start Your Application
+                            <ChevronRight className="ml-2 h-5 w-5" />
+                        </Button>
+                        <p className="mt-3 text-center text-sm text-gray-500 lg:text-left">
+                            No commitment required. Fill out the form and we'll get in touch!
+                        </p>
+                    </motion.div>
+                </div>
+
+                <div>
                     <div className="mt-10">
-                        <div className="flex items-center gap-2 mb-4">
+                        <div className="mb-4 flex items-center gap-2">
                             <Target className="h-5 w-5 text-yellow-500" />
                             <h3 className="text-lg font-semibold text-gray-900">Why Choose Us?</h3>
                         </div>
@@ -1602,189 +1501,47 @@ export default function TutorApplication() {
                     </div>
 
                     <div className="mt-8 rounded-xl border border-yellow-200 bg-gradient-to-r from-yellow-50 to-amber-50 p-6 shadow-sm">
-                        <div className="flex items-center gap-3 mb-4">
+                        <div className="mb-4 flex items-center gap-3">
                             <Award className="h-6 w-6 text-yellow-600" />
-                            <h3 className="text-lg font-semibold text-gray-900">
-                                Application Requirements 📄
-                            </h3>
+                            <h3 className="text-lg font-semibold text-gray-900">Application Requirements 📄</h3>
                         </div>
 
                         <ul className="space-y-3 text-gray-700">
                             <li className="flex items-start gap-3">
-                                <Star className="h-4 w-4 text-yellow-500 mt-0.5 flex-shrink-0" />
+                                <Star className="mt-0.5 h-4 w-4 flex-shrink-0 text-yellow-500" />
                                 <span>Your most recent resume (PDF preferred)</span>
                             </li>
                             <li className="flex items-start gap-3">
-                                <Star className="h-4 w-4 text-yellow-500 mt-0.5 flex-shrink-0" />
+                                <Star className="mt-0.5 h-4 w-4 flex-shrink-0 text-yellow-500" />
                                 <span>Teaching certificates or credentials (if any)</span>
                             </li>
                             <li className="flex items-start gap-3">
-                                <Star className="h-4 w-4 text-yellow-500 mt-0.5 flex-shrink-0" />
+                                <Star className="mt-0.5 h-4 w-4 flex-shrink-0 text-yellow-500" />
                                 <span>Academic transcripts (optional but recommended)</span>
                             </li>
                             <li className="flex items-start gap-3">
-                                <Star className="h-4 w-4 text-yellow-500 mt-0.5 flex-shrink-0" />
+                                <Star className="mt-0.5 h-4 w-4 flex-shrink-0 text-yellow-500" />
                                 <span>Any supporting documents showcasing your expertise</span>
                             </li>
                         </ul>
 
-                        <div className="mt-6 p-4 bg-white rounded-lg border border-yellow-100">
+                        <div className="mt-6 rounded-lg border border-yellow-100 bg-white p-4">
                             <p className="text-sm text-gray-600">
-                                ⚡ <span className="font-semibold">Quick Review:</span> We typically review applications within <span className="text-yellow-600 font-bold">2-7 days</span>. Your login credentials will be sent to your email upon approval.
+                                ⚡ <span className="font-semibold">Quick Review:</span> We typically review applications within{' '}
+                                <span className="font-bold text-yellow-600">2-7 days</span>. Your login credentials will be sent to your email upon
+                                approval.
                             </p>
                         </div>
                     </div>
-
-                    <motion.div
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        className="mt-10"
-                    >
-                        <Button
-                            onClick={() => setShowForm(true)}
-                            className="w-full lg:w-auto bg-gradient-to-r rounded-full from-yellow-400 to-amber-500 text-black hover:from-yellow-500 hover:to-amber-600 px-10 py-6 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
-                        >
-                            <GraduationCap className="mr-3 h-6 w-6" />
-                            Start Your Application
-                            <ChevronRight className="ml-2 h-5 w-5" />
-                        </Button>
-                        <p className="mt-3 text-center lg:text-left text-sm text-gray-500">
-                            No commitment required. Fill out the form and we'll get in touch!
-                        </p>
-                    </motion.div>
-
-                    <div className="mt-12 pt-8 border-t border-gray-100">
-                        <div className="flex items-center justify-center lg:justify-start gap-6">
-                            <div className="text-center">
-                                <div className="text-2xl font-bold text-yellow-500">500+</div>
-                                <div className="text-sm text-gray-600">Active Tutors</div>
-                            </div>
-                            <div className="h-8 w-px bg-gray-200"></div>
-                            <div className="text-center">
-                                <div className="text-2xl font-bold text-yellow-500">10K+</div>
-                                <div className="text-sm text-gray-600">Students Helped</div>
-                            </div>
-                            <div className="h-8 w-px bg-gray-200"></div>
-                            <div className="text-center">
-                                <div className="text-2xl font-bold text-yellow-500">98%</div>
-                                <div className="text-sm text-gray-600">Satisfaction Rate</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Right Image Section */}
-                <div className="relative lg:block hidden">
-                    <motion.div
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.7, delay: 0.2 }}
-                        className="relative"
-                    >
-                        {/* Main Image Container */}
-                        <div className="relative h-[600px] rounded-2xl overflow-hidden shadow-2xl">
-                            {/* Background Pattern */}
-                            <div className="absolute inset-0 bg-gradient-to-br from-yellow-400/10 via-amber-50/20 to-yellow-300/5"></div>
-
-                            {/* Tutor Image */}
-                            <div className="absolute inset-0">
-                                <div className="h-full w-full bg-gradient-to-b from-yellow-50 to-amber-100 relative">
-                                    {/* Decorative elements */}
-                                    <div className="absolute top-10 left-10 w-20 h-20 rounded-full bg-yellow-200/30"></div>
-                                    <div className="absolute bottom-20 right-10 w-32 h-32 rounded-full bg-amber-200/20"></div>
-
-                                    {/* Tutor Illustration */}
-                                    <div className="absolute inset-0 flex items-center justify-center p-8">
-                                        <div className="relative w-full max-w-md">
-                                            {/* Teacher figure */}
-                                            <div className="relative mx-auto">
-                                                <div className="h-72 w-56 mx-auto relative">
-                                                    {/* Body */}
-                                                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-48 h-48 rounded-t-full bg-gradient-to-b from-yellow-400 to-amber-500"></div>
-
-                                                    {/* Head */}
-                                                    <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-32 h-32 rounded-full bg-gradient-to-b from-amber-100 to-amber-200">
-                                                        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-full bg-gradient-to-b from-yellow-300 to-amber-400"></div>
-                                                    </div>
-
-                                                    {/* Book */}
-                                                    <div className="absolute -bottom-6 -right-4 w-24 h-32 bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg shadow-lg transform rotate-6">
-                                                        <div className="absolute inset-2 bg-white/20 rounded"></div>
-                                                        <div className="absolute top-2 left-3 right-3 h-4 bg-white/30 rounded"></div>
-                                                        <div className="absolute top-8 left-3 right-3 h-4 bg-white/30 rounded"></div>
-                                                        <div className="absolute top-14 left-3 right-3 h-4 bg-white/30 rounded"></div>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Floating elements */}
-                                            <div className="absolute -top-10 -right-4 w-16 h-16 bg-white rounded-full shadow-lg flex items-center justify-center">
-                                                <GraduationCap className="h-8 w-8 text-yellow-500" />
-                                            </div>
-
-                                            <div className="absolute -bottom-6 -left-4 w-16 h-16 bg-white rounded-full shadow-lg flex items-center justify-center">
-                                                <BookOpen className="h-8 w-8 text-yellow-500" />
-                                            </div>
-
-                                            <div className="absolute top-1/2 -right-10 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center">
-                                                <Star className="h-6 w-6 text-yellow-500" />
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Quote Box */}
-                            <div className="absolute bottom-8 left-8 right-8 bg-white/90 backdrop-blur-sm rounded-xl p-6 shadow-lg">
-                                <div className="flex items-start gap-3">
-                                    <div className="flex-shrink-0">
-                                        <div className="h-12 w-12 rounded-full bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center">
-                                            <Zap className="h-6 w-6 text-white" />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <p className="text-gray-800 italic">
-                                            "Teaching at Soraya has been transformative. The flexibility and support allowed me to grow both professionally and personally."
-                                        </p>
-                                        <p className="mt-2 text-sm font-semibold text-gray-900">
-                                            — Maria Santos, Math Tutor for 3 years
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Stats Badges */}
-                        <div className="absolute -top-6 -right-6 bg-white rounded-xl shadow-xl p-4">
-                            <div className="text-center">
-                                <div className="text-3xl font-bold text-yellow-600">4.9</div>
-                                <div className="text-sm text-gray-600">Rating</div>
-                                <div className="flex items-center justify-center mt-1">
-                                    {[1, 2, 3, 4, 5].map((i) => (
-                                        <Star key={i} className="h-3 w-3 text-yellow-400 fill-current" />
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="absolute -bottom-6 -left-6 bg-white rounded-xl shadow-xl p-4">
-                            <div className="text-center">
-                                <div className="text-3xl font-bold text-yellow-600">24h</div>
-                                <div className="text-sm text-gray-600">Avg Response</div>
-                            </div>
-                        </div>
-                    </motion.div>
                 </div>
             </motion.div>
         </div>
     );
 
     const renderFormContent = () => (
-        <Card className="bg-white text-gray-900 shadow-lg border-gray-200">
+        <Card className="border-gray-200 bg-white text-gray-900 shadow-lg">
             <CardHeader>
-                <CardTitle className="text-xl">
-                    Tutor Application
-                </CardTitle>
+                <CardTitle className="text-xl">Tutor Application</CardTitle>
                 <CardDescription className="text-gray-600">
                     Step {currentStep} of {FORM_STEPS.length}: {FORM_STEPS[currentStep - 1].title}
                 </CardDescription>
@@ -1795,12 +1552,10 @@ export default function TutorApplication() {
                     {renderStepIndicator()}
 
                     <div className="min-h-[400px]">
-                        <AnimatePresence mode="wait">
-                            {renderCurrentStep()}
-                        </AnimatePresence>
+                        <AnimatePresence mode="wait">{renderCurrentStep()}</AnimatePresence>
                     </div>
 
-                    <div className="flex justify-between pt-4 border-t">
+                    <div className="flex justify-between border-t pt-4">
                         <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                             <Button
                                 type="button"
@@ -1820,7 +1575,7 @@ export default function TutorApplication() {
                                     onMouseDown={(e) => e.preventDefault()}
                                     onClick={(e) => handleSubmit(e as any)}
                                     disabled={processing}
-                                    className="bg-yellow-400 text-black hover:bg-yellow-500 disabled:opacity-50 flex items-center gap-2"
+                                    className="flex items-center gap-2 bg-yellow-400 text-black hover:bg-yellow-500 disabled:opacity-50"
                                 >
                                     {processing ? (
                                         <>
@@ -1841,7 +1596,7 @@ export default function TutorApplication() {
                                     type="button"
                                     onMouseDown={(e) => e.preventDefault()}
                                     onClick={(e) => handleNextStep(e)}
-                                    className="bg-yellow-400 text-black hover:bg-yellow-500 flex items-center gap-2"
+                                    className="flex items-center gap-2 bg-yellow-400 text-black hover:bg-yellow-500"
                                 >
                                     Next
                                     <ChevronRight className="h-4 w-4" />
@@ -1869,9 +1624,7 @@ export default function TutorApplication() {
 
                 <section className="py-10 sm:py-16 lg:py-24">
                     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                        <div className="grid grid-cols-1 gap-12 ">
-                            {!showForm ? renderLandingContent() : renderFormContent()}
-                        </div>
+                        <div className="grid grid-cols-1 gap-12">{!showForm ? renderLandingContent() : renderFormContent()}</div>
                     </div>
                 </section>
             </div>

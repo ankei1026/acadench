@@ -68,6 +68,7 @@ export default function CreateProgram() {
         price: '',
         session_count: '',
         description: '',
+        setting: '' as string,
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -91,6 +92,7 @@ export default function CreateProgram() {
                     price: '',
                     session_count: '',
                     description: '',
+                    setting: '',
                 });
             },
             onError: (errors) => {
@@ -150,8 +152,8 @@ export default function CreateProgram() {
                             </CardHeader>
                             <CardContent className="pt-6">
                                 <form onSubmit={handleSubmit} className="space-y-8">
-                                    {/* Program Name & Type */}
-                                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                                    {/* Program Name & Type & Setting */}
+                                    <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
                                         <div className="space-y-3">
                                             <Label htmlFor="name" className="text-sm font-semibold">
                                                 Program Name <span className="text-red-500">*</span>
@@ -191,6 +193,30 @@ export default function CreateProgram() {
                                                 </SelectContent>
                                             </Select>
                                             {errors.prog_type && <p className="text-sm text-red-600">{errors.prog_type}</p>}
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <Label htmlFor="setting" className="text-sm font-semibold">
+                                                Setting <span className="text-red-500">*</span>
+                                            </Label>
+                                            <Select value={data.setting} onValueChange={(value) => setData('setting', value)} required>
+                                                <SelectTrigger className={errors.setting ? 'border-red-500' : ''}>
+                                                    <SelectValue placeholder="Select setting" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="hub">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-medium">Hub</span>
+                                                        </div>
+                                                    </SelectItem>
+                                                    <SelectItem value="online">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-medium">Online</span>
+                                                        </div>
+                                                    </SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            {errors.setting && <p className="text-sm text-red-600">{errors.setting}</p>}
                                         </div>
                                     </div>
 

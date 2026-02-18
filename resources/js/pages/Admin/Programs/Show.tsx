@@ -20,6 +20,7 @@ interface Program {
     price: number;
     session_count: number;
     description?: string;
+    setting?: string;
     created_at?: string;
     updated_at?: string;
 }
@@ -245,6 +246,20 @@ export default function ShowProgram({ program }: ShowProgramProps) {
                                         Total Sessions
                                     </h4>
                                     <p className="text-2xl font-bold">{program.session_count}</p>
+                                </div>
+
+                                <Separator />
+
+                                <div className="space-y-2">
+                                    <h4 className="text-sm font-medium text-muted-foreground">Setting</h4>
+                                    <Badge
+                                        className={`px-3 py-1 text-lg ${program.setting === 'online'
+                                            ? 'bg-purple-100 text-purple-800 border border-purple-200'
+                                            : 'bg-amber-100 text-amber-800 border border-amber-200'
+                                        }`}
+                                    >
+                                        {program.setting === 'online' ? '🌐 Online' : '🏠 Hub'}
+                                    </Badge>
                                 </div>
 
                                 <Separator />

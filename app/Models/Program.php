@@ -52,6 +52,7 @@ class Program extends Model
         'start_time',
         'end_time',
         'price',
+        'setting',
         'session_count',
     ];
 

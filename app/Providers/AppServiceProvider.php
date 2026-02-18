@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use App\Channels\SmsChannel;
 use Carbon\CarbonImmutable;
+use Illuminate\Notifications\ChannelManager;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
@@ -24,6 +26,17 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->registerNotificationChannels();
+    }
+
+    /**
+     * Register custom notification channels.
+     */
+    protected function registerNotificationChannels(): void
+    {
+        $this->app->make(ChannelManager::class)->extend('sms', function () {
+            return $this->app->make(SmsChannel::class);
+        });
     }
 
     /**

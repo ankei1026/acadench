@@ -1,0 +1,16 @@
+fastapi==0.95.0
+uvicorn==0.21.1
+pydantic==1.10.7
+python-dotenv==1.0.0
+
+# pip uninstall fastapi uvicorn pydantic pydantic-core python-dotenv -y
+# pip install -r requirements.txt
+# uvicorn main:app --reload --host 127.0.0.1 --port 9000
+# pip install --upgrade setuptools wheel
+
+# Install specific versions known to work together
+# pip install fastapi==0.100.0
+# pip install uvicorn==0.23.2
+# pip install "pydantic>=2.0.0,<3.0.0"
+# pip install python-dotenv==1.0.0
+# pip install numpy==1.24.3

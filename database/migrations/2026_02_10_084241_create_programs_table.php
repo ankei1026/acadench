@@ -21,6 +21,7 @@ return new class extends Migration
             $table->time('end_time');
             $table->decimal('price', 10, 2);
             $table->unsignedSmallInteger('session_count');
+            $table->enum('setting', ['hub', 'online']);
             $table->timestamps();
         });
     }

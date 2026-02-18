@@ -35,4 +35,16 @@ return [
         ],
     ],
 
+    'pricing_api' => [
+        'url' => env('PRICING_API_URL', 'http://127.0.0.1:9000'),
+        'timeout' => env('PRICING_API_TIMEOUT', 3),
+        'fallback' => env('PRICING_API_FALLBACK', true),
+    ],
+
+    'philsms' => [
+        'url' => env('PHILSMS_API_URL', 'https://dashboard.philsms.com/api/v3'),
+        'api_key' => env('PHILSMS_API_KEY'),
+        'sender_id' => env('PHILSMS_SENDER_ID', 'PhilSMS'),
+    ],
+
 ];

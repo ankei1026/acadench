@@ -44,6 +44,7 @@ class AdminProgramsController extends Controller
             'end_time' => 'required|date_format:H:i|after:start_time',
             'price' => 'required|numeric|min:0',
             'session_count' => 'required|integer|min:1',
+            'setting' => 'required|in:hub,online',
         ]);
 
         // Convert days array to JSON
@@ -53,7 +54,7 @@ class AdminProgramsController extends Controller
         Program::create($validated);
 
         // Redirect with success message
-        return redirect()->back()->with('success', 'Program created successfully!');
+        return redirect()->route('admin.programs.index')->with('success', 'Program created successfully!');
     }
 
     /**
@@ -91,6 +92,7 @@ class AdminProgramsController extends Controller
             'end_time' => 'required|date_format:H:i|after:start_time',
             'price' => 'required|numeric|min:0',
             'session_count' => 'required|integer|min:1',
+            'setting' => 'required|in:hub,online',
         ]);
 
         // Convert days array to JSON

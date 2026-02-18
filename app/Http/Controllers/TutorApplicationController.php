@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\TutorApplication;
+use App\Models\User;
+use App\Notifications\InAppNotification;
+use App\Notifications\TutorApplicationStatusNotification;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -233,5 +236,72 @@ class TutorApplicationController extends Controller
         ]);
 
         return redirect()->back()->with('success', 'Your tutor application has been submitted! We will review it within 2-7 days.');
+    }
+
+    /**
+     * Approve a tutor application and send notification
+     */
+    public function approve(Request $request, TutorApplication $application)
+    {
+        $this->authorize('update', $application);
+
+        $validated = $request->validate([
+            'notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $application->update([
+            'status' => 'approved',
+            'notes' => $validated['notes'] ?? null,
+        ]);
+
+        // Send SMS and in-app notification
+        $this->sendApplicationStatusNotification($application, 'approved');
+
+        return redirect()->back()->with('success', 'Tutor application approved! Notification sent.');
+    }
+
+    /**
+     * Reject a tutor application and send notification
+     */
+    public function reject(Request $request, TutorApplication $application)
+    {
+        $this->authorize('update', $application);
+
+        $validated = $request->validate([
+            'notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $application->update([
+            'status' => 'rejected',
+            'notes' => $validated['notes'] ?? null,
+        ]);
+
+        // Send SMS and in-app notification
+        $this->sendApplicationStatusNotification($application, 'rejected');
+
+        return redirect()->back()->with('success', 'Tutor application rejected! Notification sent.');
+    }
+
+    /**
+     * Send application status notification via SMS and in-app
+     */
+    private function sendApplicationStatusNotification(TutorApplication $application, string $status)
+    {
+        // Create or get a dummy user for queued notifications (SMS and in-app)
+        // If the applicant has an associated user account, we use that
+        $user = User::where('email', $application->email)->first();
+
+        if ($user) {
+            // Send through notification system
+            $user->notify(new TutorApplicationStatusNotification($application, $status));
+        } else {
+            // Send SMS directly if no user account
+            $smsService = app(\App\Services\SmsService::class);
+            $messageMap = [
+                'approved' => "Hi {$application->full_name}, Congratulations! Your tutor application has been approved. You are now part of our tutor network. Welcome aboard!",
+                'rejected' => "Hi {$application->full_name}, Thank you for your interest in our platform. Unfortunately, your tutor application was not approved at this time. Feel free to reapply in the future.",
+            ];
+            $smsService->send($application->phone, $messageMap[$status] ?? 'Your application status has been updated.');
+        }
     }
 }

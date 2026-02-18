@@ -37,6 +37,7 @@ interface Program {
     capacity?: number;
     available_slots?: number;
     description?: string;
+    setting?: string;
 }
 
 interface ProgramsPageProps {
@@ -361,6 +362,22 @@ export default function Programs({ programs }: ProgramsPageProps) {
                                                     </div>
                                                     <Badge variant="secondary" className="bg-blue-50 text-blue-700 hover:bg-blue-100">
                                                         {program.session_count}
+                                                    </Badge>
+                                                </div>
+                                                {/* Setting */}
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                                                        <span className="text-lg">📍</span>
+                                                        Setting
+                                                    </div>
+                                                    <Badge
+                                                        variant="secondary"
+                                                        className={program.setting === 'online'
+                                                            ? 'bg-purple-50 text-purple-700 hover:bg-purple-100'
+                                                            : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+                                                        }
+                                                    >
+                                                        {program.setting === 'online' ? '🌐 Online' : '🏠 Hub'}
                                                     </Badge>
                                                 </div>
                                                 {program.capacity && (

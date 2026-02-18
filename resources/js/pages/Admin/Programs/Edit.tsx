@@ -23,6 +23,7 @@ interface Program {
     price: number;
     session_count: number;
     description?: string;
+    setting?: string;
 }
 
 interface EditProgramProps {
@@ -87,6 +88,7 @@ export default function EditProgram({ program }: EditProgramProps) {
         price: program.price.toString(),
         session_count: program.session_count.toString(),
         description: program.description || '',
+        setting: program.setting || '',
     });
 
     const breadcrumbs: BreadcrumbItem[] = [
@@ -154,8 +156,8 @@ export default function EditProgram({ program }: EditProgramProps) {
                     </CardHeader>
                     <CardContent>
                         <form onSubmit={handleSubmit} className="space-y-6">
-                            {/* Program Name & Type */}
-                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                            {/* Program Name & Type & Setting */}
+                            <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
                                 <div className="space-y-2">
                                     <Label htmlFor="name">
                                         Program Name <span className="text-destructive">*</span>
@@ -188,6 +190,30 @@ export default function EditProgram({ program }: EditProgramProps) {
                                         </SelectContent>
                                     </Select>
                                     {errors.prog_type && <p className="text-sm text-destructive">{errors.prog_type}</p>}
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="setting">
+                                        Setting <span className="text-destructive">*</span>
+                                    </Label>
+                                    <Select value={data.setting} onValueChange={(value) => setData('setting', value)} required>
+                                        <SelectTrigger className={errors.setting ? 'border-destructive' : ''}>
+                                            <SelectValue placeholder="Select setting" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="hub">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-medium">Hub</span>
+                                                </div>
+                                            </SelectItem>
+                                            <SelectItem value="online">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-medium">Online</span>
+                                                </div>
+                                            </SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    {errors.setting && <p className="text-sm text-destructive">{errors.setting}</p>}
                                 </div>
                             </div>
 
