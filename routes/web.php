@@ -173,6 +173,7 @@ Route::middleware(['auth', 'role:tutor'])->prefix('tutor')->group(function () {
     Route::get('/dashboard', [TutorController::class, 'index'])->name('tutor.dashboard');
     Route::get('/bookings', [TutorController::class, 'bookings'])->name('tutor.bookings');
     Route::get('/lectures', [TutorController::class, 'lectures'])->name('tutor.lectures');
+    Route::patch('/lectures/{lecture}', [TutorController::class, 'updateLecture'])->name('tutor.lectures.update');
     Route::get('/profile', [TutorController::class, 'profile'])->name('tutor.profile');
     Route::put('/profile', [TutorController::class, 'updateProfile'])->name('tutor.profile.update');
 });

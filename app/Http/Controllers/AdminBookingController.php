@@ -6,11 +6,20 @@ use App\Models\Booking;
 use App\Models\Lecture;
 use App\Models\Tutor;
 use App\Notifications\InAppNotification;
+use App\Services\SmsService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class AdminBookingController extends Controller
 {
+    protected SmsService $smsService;
+
+    public function __construct(SmsService $smsService)
+    {
+        $this->smsService = $smsService;
+    }
+
     public function index(Request $request)
     {
         $bookingsQuery = Booking::with(['parent', 'learner', 'program', 'tutor.user', 'receipts'])
@@ -96,6 +105,25 @@ class AdminBookingController extends Controller
                     type: 'success'
                 ));
 
+                // Send SMS to learner emergency contact (primary) if available
+                try {
+                    $phone = $booking->learner?->emergency_contact_primary;
+                    if (!empty($phone)) {
+                        $smsMessage = 'ACADENCH + SORAYA - Booking Approved: Your booking for "' . ($booking->program?->name ?? 'the program') . '" (Booking ID: ' . $booking->book_id . ") has been approved.\nThank you.";
+                        $sent = $this->smsService->send($phone, $smsMessage);
+                        Log::info('Booking approval SMS', [
+                            'book_id' => $booking->book_id,
+                            'phone' => $phone,
+                            'sent' => $sent,
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    Log::error('Failed to send booking approval SMS', [
+                        'book_id' => $booking->book_id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+
                 // Notify assigned tutor(s) about the lectures
                 if ($booking->tutor) {
                     $lectures = Lecture::where('book_id', $booking->book_id)->get();
@@ -105,6 +133,17 @@ class AdminBookingController extends Controller
                             message: 'You have been assigned to teach "' . $lecture->name . '" (' . $booking->learner?->name . ')',
                             type: 'info'
                         ));
+                    }
+                    // Send SMS to newly assigned tutor
+                    try {
+                        $phone = $booking->tutor->user->routeNotificationForSms();
+                        if (!empty($phone)) {
+                            $smsMessage = "ACADENCH + SORAYA LEARNING HUB - New Lecture Assignment\nYou have been assigned to teach for booking ID: {$booking->book_id}. Please check your dashboard.";
+                            $this->smsService->send($phone, $smsMessage, $booking->tutor->number ?? null);
+                            Log::info('Sent tutor assignment SMS', ['book_id' => $booking->book_id, 'tutor' => $booking->tutor->tutor_id, 'phone' => $phone]);
+                        }
+                    } catch (\Exception $e) {
+                        Log::error('Failed to send tutor assignment SMS', ['book_id' => $booking->book_id, 'error' => $e->getMessage()]);
                     }
                 }
             }
@@ -146,6 +185,17 @@ class AdminBookingController extends Controller
                 message: 'You have been assigned to teach "' . $lecture->name . '" (' . $booking->learner?->name . ')',
                 type: 'info'
             ));
+        }
+        // Send SMS to newly assigned tutor
+        try {
+            $phone = $booking->tutor->user->routeNotificationForSms();
+            if (!empty($phone)) {
+                $smsMessage = "ACADENCH + SORAYA LEARNING HUB - New Lecture Assignment\nYou have been assigned to teach for booking ID: {$booking->book_id}. Please check your dashboard.";
+                $this->smsService->send($phone, $smsMessage, $booking->tutor->number ?? null);
+                Log::info('Sent tutor assignment SMS (assignTutor)', ['book_id' => $booking->book_id, 'tutor' => $booking->tutor->tutor_id, 'phone' => $phone]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Failed to send tutor assignment SMS (assignTutor)', ['book_id' => $booking->book_id, 'error' => $e->getMessage()]);
         }
 
         return back()->with('success', 'Tutor assigned successfully');

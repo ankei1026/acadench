@@ -1,10 +1,15 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
-import { Video, Link as LinkIcon, BookOpen, User, Calendar, ExternalLink, Clock, FileText } from 'lucide-react';
+import { Head, useForm } from '@inertiajs/react';
+import { Video, Link as LinkIcon, BookOpen, User, Calendar, ExternalLink, Clock, FileText, Edit2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { formatDate } from '@/lib/dateTimeFormat';
+import { useState } from 'react';
 
 interface LectureRow {
     lecture_id: string;
@@ -88,6 +93,33 @@ const formatDays = (days: string[] | string | null): string => {
 };
 
 export default function TutorLectures({ lectures, tutor_id }: TutorLecturesPageProps) {
+    const [editDialogOpen, setEditDialogOpen] = useState(false);
+    const [selectedLecture, setSelectedLecture] = useState<LectureRow | null>(null);
+    const { data, setData, patch, processing, reset } = useForm({
+        platform: '',
+        platform_link: '',
+    });
+
+    const handleEdit = (lecture: LectureRow) => {
+        setSelectedLecture(lecture);
+        setData({
+            platform: lecture.platform,
+            platform_link: lecture.platform_link,
+        });
+        setEditDialogOpen(true);
+    };
+
+    const handleSave = () => {
+        if (!selectedLecture) return;
+        patch(`/tutor/lectures/${selectedLecture.lecture_id}`, {
+            onSuccess: () => {
+                setEditDialogOpen(false);
+                reset();
+                setSelectedLecture(null);
+            },
+        });
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="My Lectures" />
@@ -105,14 +137,14 @@ export default function TutorLectures({ lectures, tutor_id }: TutorLecturesPageP
                                 </h1>
                             </div>
                             <p className="ml-2 text-gray-600">
-                                View your online class lectures and meeting links
+                                View your assigned lectures and meeting links
                             </p>
                         </div>
                     </div>
                 </div>
 
                 {/* Stats Cards */}
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-2">
                     <div className="rounded-xl border border-amber-100 bg-gradient-to-br from-amber-50 to-orange-50 p-4 shadow-sm">
                         <div className="flex items-center justify-between">
                             <div>
@@ -125,41 +157,29 @@ export default function TutorLectures({ lectures, tutor_id }: TutorLecturesPageP
                         </div>
                     </div>
 
-                    <div className="rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50 to-cyan-50 p-4 shadow-sm">
+                    <div className="rounded-xl border border-purple-100 bg-gradient-to-br from-purple-50 to-pink-50 p-4 shadow-sm">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-blue-700">Google Meet</p>
+                                <p className="text-sm font-medium text-purple-700">Learners</p>
                                 <p className="text-2xl font-bold text-gray-900">
-                                    {lectures.filter(l => l.platform === 'Google Meet').length}
+                                    {new Set(lectures.map(l => l.booking?.learner?.learner_id)).size}
                                 </p>
                             </div>
-                            <div className="rounded-lg bg-gradient-to-r from-blue-500 to-cyan-500 p-2.5">
-                                <Video className="h-5 w-5 text-white" />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="rounded-xl border border-green-100 bg-gradient-to-br from-green-50 to-emerald-50 p-4 shadow-sm">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-green-700">Active</p>
-                                <p className="text-2xl font-bold text-gray-900">{lectures.length}</p>
-                            </div>
-                            <div className="rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 p-2.5">
-                                <LinkIcon className="h-5 w-5 text-white" />
+                            <div className="rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 p-2.5">
+                                <User className="h-5 w-5 text-white" />
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Lectures Grid - Card View */}
+                {/* Lectures Grid */}
                 {lectures.length > 0 ? (
                     <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                         {lectures.map((lecture) => {
                             const endDate = calculateEndDate(lecture.booking?.book_date ?? null, lecture.booking?.session_count ?? 0);
 
                             return (
-                                <Card key={lecture.lecture_id} className="border-amber-200 bg-white shadow-md hover:shadow-lg transition-all">
+                                <Card key={lecture.lecture_id} className="border-amber-200 bg-white shadow-md transition-all hover:shadow-lg">
                                     <CardHeader className="pb-3">
                                         <div className="flex items-start justify-between">
                                             <div className="flex items-center gap-3">
@@ -180,6 +200,13 @@ export default function TutorLectures({ lectures, tutor_id }: TutorLecturesPageP
                                                     </p>
                                                 </div>
                                             </div>
+                                            {/* Edit Button */}
+                                            <button
+                                                onClick={() => handleEdit(lecture)}
+                                                className="rounded-lg p-2 hover:bg-amber-100"
+                                            >
+                                                <Edit2 className="h-4 w-4 text-amber-600" />
+                                            </button>
                                         </div>
                                     </CardHeader>
                                     <CardContent className="space-y-3">
@@ -212,7 +239,7 @@ export default function TutorLectures({ lectures, tutor_id }: TutorLecturesPageP
                                         <div className="flex items-center gap-2 text-sm">
                                             <Clock className="h-4 w-4 text-amber-500" />
                                             <span className="text-gray-600">Sessions:</span>
-                                            <span className="font-medium text-gray-900">{lecture.booking?.session_count || lecture.program?.session_count || 0}</span>
+                                            <span className="font-medium text-gray-900">{lecture.booking?.session_count || 0}</span>
                                         </div>
 
                                         {/* Time */}
@@ -258,15 +285,17 @@ export default function TutorLectures({ lectures, tutor_id }: TutorLecturesPageP
                                         )}
 
                                         {/* Join Button */}
-                                        <a
-                                            href={lecture.platform_link}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 py-2.5 text-sm font-medium text-white hover:from-amber-600 hover:to-orange-600"
-                                        >
-                                            <ExternalLink className="h-4 w-4" />
-                                            Join Meeting
-                                        </a>
+                                        {lecture.platform_link && (
+                                            <a
+                                                href={lecture.platform_link}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 py-2.5 text-sm font-medium text-white hover:from-amber-600 hover:to-orange-600"
+                                            >
+                                                <ExternalLink className="h-4 w-4" />
+                                                Join Meeting
+                                            </a>
+                                        )}
                                     </CardContent>
                                 </Card>
                             );
@@ -283,6 +312,58 @@ export default function TutorLectures({ lectures, tutor_id }: TutorLecturesPageP
                         </p>
                     </div>
                 )}
+
+                {/* Edit Dialog */}
+                <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+                    <DialogContent className="sm:max-w-[500px]">
+                        <DialogHeader>
+                            <DialogTitle>Edit Lecture</DialogTitle>
+                            <DialogDescription>Update the platform and meeting link for your lecture.</DialogDescription>
+                        </DialogHeader>
+                        {selectedLecture && (
+                            <div className="grid gap-4 py-4">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="edit-platform">Platform</Label>
+                                    <Input
+                                        id="edit-platform"
+                                        value={data.platform}
+                                        onChange={(e) => setData('platform', e.target.value)}
+                                        placeholder="e.g., Google Meet, Zoom"
+                                    />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="edit-platform_link">Meeting Link</Label>
+                                    <Input
+                                        id="edit-platform_link"
+                                        type="url"
+                                        value={data.platform_link}
+                                        onChange={(e) => setData('platform_link', e.target.value)}
+                                        placeholder="https://meet.google.com/..."
+                                    />
+                                </div>
+                            </div>
+                        )}
+                        <DialogFooter>
+                            <Button
+                                variant="outline"
+                                onClick={() => {
+                                    setEditDialogOpen(false);
+                                    reset();
+                                    setSelectedLecture(null);
+                                }}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={handleSave}
+                                disabled={processing || !data.platform || !data.platform_link}
+                                className="bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600"
+                            >
+                                {processing ? 'Updating...' : 'Update Lecture'}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
         </AppLayout>
     );

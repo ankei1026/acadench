@@ -12,7 +12,7 @@ class AdminDashboardController extends Controller
     public function index()
     {
         // Get all active bookings
-        $activeBookings = Booking::with(['program', 'learner', 'tutor'])
+        $activeBookings = Booking::with(['program', 'learner', 'tutor.user'])
             ->where('booking_status', 'active')
             ->get();
 
@@ -38,7 +38,7 @@ class AdminDashboardController extends Controller
                             'session_number' => $i + 1,
                             'total_sessions' => $booking->session_count,
                             'learner' => $booking->learner?->name ?? null,
-                            'tutor' => $booking->tutor?->name ?? null,
+                            'tutor' => $booking->tutor?->user?->name ?? null,
                             'program' => $booking->program?->name ?? null,
                             'start_time' => $booking->program?->start_time ?
                                 Carbon::parse($booking->program->start_time)->format('h:i A') : null,
@@ -80,7 +80,7 @@ class AdminDashboardController extends Controller
                     ] : null,
                     'tutor' => $b->tutor ? [
                         'tutor_id' => $b->tutor->tutor_id ?? null,
-                        'name' => trim(($b->tutor->first_name ?? '') . ' ' . ($b->tutor->last_name ?? '')) ?: null,
+                        'name' => $b->tutor->user?->name ?? null,
                     ] : null,
                 ];
             }),

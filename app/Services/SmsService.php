@@ -19,13 +19,35 @@ class SmsService
     }
 
     /**
+     * Format Philippine phone number to international format
+     */
+    protected function formatPhoneNumber(string $phone): string
+    {
+        // Remove any non-numeric characters
+        $phone = preg_replace('/[^0-9]/', '', $phone);
+
+        // If it starts with 0, replace with 63
+        if (str_starts_with($phone, '0')) {
+            $phone = '63' . substr($phone, 1);
+        }
+
+        // If it doesn't start with 63, add it
+        if (!str_starts_with($phone, '63')) {
+            $phone = '63' . $phone;
+        }
+
+        return $phone;
+    }
+
+    /**
      * Send SMS using PhilSMS API v3
      *
      * @param string|array $phoneNumber Single number or array of numbers
      * @param string $message The SMS message content
+     * @param string|array|null $additionalNumbers Additional numbers to send to
      * @return bool Whether the SMS was sent successfully
      */
-    public function send($phoneNumber, string $message): bool
+    public function send($phoneNumber, string $message, $additionalNumbers = null): bool
     {
         try {
             if (!$this->apiKey) {
@@ -33,29 +55,55 @@ class SmsService
                 return false;
             }
 
-            // Convert array to comma-separated string if needed
+            // Collect all numbers
+            $allNumbers = [];
+
+            // Add primary number(s)
             if (is_array($phoneNumber)) {
-                $recipients = implode(',', $phoneNumber);
+                $allNumbers = array_merge($allNumbers, $phoneNumber);
             } else {
-                $recipients = $phoneNumber;
+                $allNumbers[] = $phoneNumber;
             }
+
+            // Add additional numbers
+            if ($additionalNumbers) {
+                if (is_array($additionalNumbers)) {
+                    $allNumbers = array_merge($allNumbers, $additionalNumbers);
+                } else {
+                    $allNumbers[] = $additionalNumbers;
+                }
+            }
+
+            // Format all phone numbers
+            $formattedNumbers = array_map([$this, 'formatPhoneNumber'], array_filter($allNumbers));
+
+            if (empty($formattedNumbers)) {
+                Log::error('No valid phone numbers provided');
+                return false;
+            }
+
+            $recipients = implode(',', array_unique($formattedNumbers));
+
+            Log::info('Sending SMS to formatted numbers', [
+                'original' => $allNumbers,
+                'formatted' => $recipients
+            ]);
 
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer ' . $this->apiKey,
                 'Content-Type' => 'application/json',
                 'Accept' => 'application/json',
-            ])->post($this->apiUrl . '/sms/send', [  // Fixed endpoint
-                'recipient' => $recipients,        // Fixed field name
+            ])->post($this->apiUrl . '/sms/send', [
+                'recipient' => $recipients,
                 'message' => $message,
                 'sender_id' => $this->senderId,
-                'type' => 'plain',                  // Added required field
+                'type' => 'plain',
             ]);
 
             if ($response->successful()) {
                 Log::info('SMS sent successfully', [
                     'phone' => $recipients,
                     'message_length' => strlen($message),
-                    'response' => $response->json(),
                 ]);
                 return true;
             }
@@ -85,94 +133,5 @@ class SmsService
     public function sendBulk(array $numbers, string $message): bool
     {
         return $this->send($numbers, $message);
-    }
-
-    /**
-     * Create or update a contact in PhilSMS
-     *
-     * @param string $groupId Contact group ID
-     * @param array $contactData Contact information (phone, first_name, last_name)
-     * @return array|null Created/updated contact data
-     */
-    public function createContact(string $groupId, array $contactData): ?array
-    {
-        try {
-            if (!$this->apiKey) {
-                Log::error('PhilSMS API key not configured');
-                return null;
-            }
-
-            $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $this->apiKey,
-                'Content-Type' => 'application/json',
-                'Accept' => 'application/json',
-            ])->post($this->apiUrl . "/contacts/{$groupId}/store", $contactData);
-
-            if ($response->successful()) {
-                Log::info('Contact created successfully', ['group_id' => $groupId]);
-                return $response->json()['data'] ?? null;
-            }
-
-            $error = $response->json()['message'] ?? 'Unknown error';
-            Log::error('Contact creation failed', [
-                'group_id' => $groupId,
-                'error' => $error,
-                'response' => $response->body(),
-            ]);
-
-            return null;
-        } catch (\Exception $e) {
-            Log::error('SMS contact creation exception', [
-                'group_id' => $groupId,
-                'error' => $e->getMessage(),
-            ]);
-
-            return null;
-        }
-    }
-
-    /**
-     * Delete a contact from PhilSMS
-     *
-     * @param string $groupId Contact group ID
-     * @param string $contactId Contact UID
-     * @return bool Whether the contact was deleted successfully
-     */
-    public function deleteContact(string $groupId, string $contactId): bool
-    {
-        try {
-            if (!$this->apiKey) {
-                Log::error('PhilSMS API key not configured');
-                return false;
-            }
-
-            $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $this->apiKey,
-                'Content-Type' => 'application/json',
-                'Accept' => 'application/json',
-            ])->delete($this->apiUrl . "/contacts/{$groupId}/delete/{$contactId}");
-
-            if ($response->successful()) {
-                Log::info('Contact deleted successfully', [
-                    'group_id' => $groupId,
-                    'contact_id' => $contactId,
-                ]);
-                return true;
-            }
-
-            $error = $response->json()['message'] ?? 'Unknown error';
-            Log::error('Contact deletion failed', [
-                'error' => $error,
-                'response' => $response->body(),
-            ]);
-
-            return false;
-        } catch (\Exception $e) {
-            Log::error('SMS contact deletion exception', [
-                'error' => $e->getMessage(),
-            ]);
-
-            return false;
-        }
     }
 }

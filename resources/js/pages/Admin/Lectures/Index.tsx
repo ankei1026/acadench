@@ -23,6 +23,7 @@ interface LectureRow {
         prog_id: string;
         name: string;
         prog_type: string;
+        setting?: string | null;
         start_time: string | null;
         end_time: string | null;
         days: string[] | null;
@@ -50,7 +51,7 @@ interface LectureRow {
 
 interface AvailableBooking {
     book_id: string;
-    prog_type: string;
+    setting: string; // 'online' | 'hub' | 'onsite' etc.
     program_name: string;
     learner_name: string;
     parent_name: string;
@@ -90,6 +91,13 @@ const calculateEndDate = (startDate: string | null, sessionCount: number): strin
     return end.toISOString().split('T')[0];
 };
 
+// Detect hub/onsite prog types (accept variants like "hub{onsite}")
+const isHubType = (progType?: string | null): boolean => {
+    if (!progType) return false;
+    const pt = progType.toLowerCase();
+    return pt.includes('hub') || pt.includes('onsite');
+};
+
 // Helper to format time to 12-hour format with AM/PM
 const formatTime12Hour = (time: string | null): string => {
     if (!time) return '';
@@ -120,6 +128,7 @@ export default function AdminLectures({ lectures, available_bookings, available_
     const [createDialogOpen, setCreateDialogOpen] = useState(false);
     const [editDialogOpen, setEditDialogOpen] = useState(false);
     const [selectedLecture, setSelectedLecture] = useState<LectureRow | null>(null);
+    const [editIsHub, setEditIsHub] = useState(false);
 
     const {
         data,
@@ -145,8 +154,10 @@ export default function AdminLectures({ lectures, available_bookings, available_
                 setCreateDialogOpen(false);
                 reset();
             },
-            onError: () => {
-                toast.error('Failed to create lecture');
+            onError: (errors) => {
+                console.error('Create lecture errors:', errors);
+                const first = errors && Object.values(errors)[0];
+                toast.error(first ? String(first) : 'Failed to create lecture');
             },
         });
     };
@@ -160,6 +171,7 @@ export default function AdminLectures({ lectures, available_bookings, available_
             platform_link: lecture.platform_link || '',
             tutor_id: lecture.booking?.tutor?.tutor_id || '',
         });
+        setEditIsHub(isHubType(lecture.program?.setting));
         setEditDialogOpen(true);
     };
 
@@ -173,9 +185,12 @@ export default function AdminLectures({ lectures, available_bookings, available_
                 setEditDialogOpen(false);
                 setSelectedLecture(null);
                 reset();
+                setEditIsHub(false);
             },
-            onError: () => {
-                toast.error('Failed to update lecture');
+            onError: (errors) => {
+                console.error('Update lecture errors:', errors);
+                const first = errors && Object.values(errors)[0];
+                toast.error(first ? String(first) : 'Failed to update lecture');
             },
         });
     };
@@ -210,7 +225,7 @@ export default function AdminLectures({ lectures, available_bookings, available_
                                     Manage Lectures
                                 </h1>
                             </div>
-                            <p className="ml-2 text-gray-600">Create and manage online class lectures for paid bookings</p>
+                            <p className="ml-2 text-gray-600">Manage lectures for bookings</p>
                         </div>
                         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
                             <DialogContent className="sm:max-w-[500px]">
@@ -252,7 +267,7 @@ export default function AdminLectures({ lectures, available_bookings, available_
                                             placeholder="e.g., Math Lesson 1"
                                         />
                                     </div>
-                                    {data.book_id && available_bookings.find((b) => b.book_id === data.book_id)?.prog_type !== 'hub' ? (
+                                    {data.book_id && !isHubType(available_bookings.find((b) => b.book_id === data.book_id)?.setting) ? (
                                         <>
                                             <div className="grid gap-2">
                                                 <Label htmlFor="platform">Platform</Label>
@@ -263,10 +278,6 @@ export default function AdminLectures({ lectures, available_bookings, available_
                                                     <SelectContent>
                                                         <SelectItem value="Google Meet">Google Meet</SelectItem>
                                                         <SelectItem value="Zoom">Zoom</SelectItem>
-                                                        <SelectItem value="Microsoft Teams">Microsoft Teams</SelectItem>
-                                                        <SelectItem value="Discord">Discord</SelectItem>
-                                                        <SelectItem value="Skype">Skype</SelectItem>
-                                                        <SelectItem value="Other">Other</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                             </div>
@@ -303,7 +314,13 @@ export default function AdminLectures({ lectures, available_bookings, available_
                                     </Button>
                                     <Button
                                         onClick={handleCreate}
-                                        disabled={processing || !data.book_id || !data.name || (available_bookings.find((b) => b.book_id === data.book_id)?.prog_type !== 'hub' && (!data.platform || !data.platform_link))}
+                                        disabled={
+                                            processing ||
+                                            !data.book_id ||
+                                            !data.name ||
+                                            (!isHubType(available_bookings.find((b) => b.book_id === data.book_id)?.setting) &&
+                                                (!data.platform || !data.platform_link))
+                                        }
                                         className="bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600"
                                     >
                                         {processing ? 'Creating...' : 'Create Lecture'}
@@ -324,17 +341,6 @@ export default function AdminLectures({ lectures, available_bookings, available_
                             </div>
                             <div className="rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 p-2.5">
                                 <Video className="h-5 w-5 text-white" />
-                            </div>
-                        </div>
-                    </div>
-                    <div className="rounded-xl border border-green-100 bg-gradient-to-br from-green-50 to-emerald-50 p-4 shadow-sm">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-green-700">Active</p>
-                                <p className="text-2xl font-bold text-gray-900">{lectures.length}</p>
-                            </div>
-                            <div className="rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 p-2.5">
-                                <BookOpen className="h-5 w-5 text-white" />
                             </div>
                         </div>
                     </div>
@@ -388,22 +394,22 @@ export default function AdminLectures({ lectures, available_bookings, available_
                                         </div>
                                     </CardHeader>
                                     <CardContent className="space-y-3">
-                                    <div className="flex items-center gap-2 text-sm">
-                                        <BookOpen className="h-4 w-4 text-blue-500" />
-                                        <span className="text-gray-600">Platform:</span>
-                                        <span className="font-medium text-gray-900">{lecture.platform || '—'}</span>
-                                    </div>
+                                        <div className="flex items-center gap-2 text-sm">
+                                            <BookOpen className="h-4 w-4 text-blue-500" />
+                                            <span className="text-gray-600">Platform:</span>
+                                            <span className="font-medium text-gray-900">{lecture.platform || '—'}</span>
+                                        </div>
 
-                                    {/* Schedule */}
-                                    <div className="flex items-center gap-2 text-sm">
-                                        <Calendar className="h-4 w-4 text-purple-500" />
-                                        <span className="text-gray-600">Schedule:</span>
-                                        <span className="font-medium text-gray-900">
-                                            {lecture.booking?.book_date
-                                                ? `${formatDate(lecture.booking.book_date)} → ${endDate ? formatDate(endDate) : 'N/A'}`
-                                                : 'N/A'}
-                                        </span>
-                                    </div>
+                                        {/* Schedule */}
+                                        <div className="flex items-center gap-2 text-sm">
+                                            <Calendar className="h-4 w-4 text-purple-500" />
+                                            <span className="text-gray-600">Schedule:</span>
+                                            <span className="font-medium text-gray-900">
+                                                {lecture.booking?.book_date
+                                                    ? `${formatDate(lecture.booking.book_date)} → ${endDate ? formatDate(endDate) : 'N/A'}`
+                                                    : 'N/A'}
+                                            </span>
+                                        </div>
 
                                         {/* Sessions */}
                                         <div className="flex items-center gap-2 text-sm">
@@ -478,7 +484,7 @@ export default function AdminLectures({ lectures, available_bookings, available_
 
                                         {/* Action Buttons */}
                                         <div className="flex gap-2 pt-2">
-                                            {lecture.platform_link && lecture.program?.prog_type !== 'hub' ? (
+                                            {lecture.platform_link && !isHubType(lecture.program?.setting) ? (
                                                 <a
                                                     href={lecture.platform_link}
                                                     target="_blank"
@@ -517,7 +523,7 @@ export default function AdminLectures({ lectures, available_bookings, available_
                                 <Label htmlFor="edit-name">Lecture Name</Label>
                                 <Input id="edit-name" value={data.name} onChange={(e) => setData('name', e.target.value)} />
                             </div>
-                            {selectedLecture && selectedLecture.program?.prog_type !== 'hub' ? (
+                            {selectedLecture && !isHubType(selectedLecture.program?.setting) ? (
                                 <>
                                     <div className="grid gap-2">
                                         <Label htmlFor="edit-platform">Platform</Label>
@@ -562,12 +568,18 @@ export default function AdminLectures({ lectures, available_bookings, available_
                             </div>
                         </div>
                         <DialogFooter>
-                            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+                            <Button
+                                variant="outline"
+                                onClick={() => {
+                                    setEditDialogOpen(false);
+                                    setEditIsHub(false);
+                                }}
+                            >
                                 Cancel
                             </Button>
                             <Button
                                 onClick={handleUpdate}
-                                disabled={processing || !data.name || (selectedLecture?.program?.prog_type !== 'hub' && (!data.platform || !data.platform_link))}
+                                disabled={processing || !data.name || (!editIsHub && (!data.platform || !data.platform_link))}
                                 className="bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600"
                             >
                                 {processing ? 'Updating...' : 'Update Lecture'}

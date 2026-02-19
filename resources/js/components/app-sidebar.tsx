@@ -103,14 +103,9 @@ const tutorMainNavItems: NavItem[] = [
         icon: LayoutGrid,
     },
     {
-        title: 'Bookings',
-        href: '/tutor/bookings',
-        icon: Book,
-    },
-    {
         title: 'Lectures',
         href: '/tutor/lectures',
-        icon: Pen,
+        icon: Video,
     },
     {
         title: 'Tutor Profile',

@@ -85,9 +85,6 @@ export default function Revenue() {
                             </div>
                             <p className="ml-2 text-gray-600">Track payments and revenue overview</p>
                         </div>
-                        <Link href="/admin/refund-requests">
-                            <Button variant="outline">View Refund Requests</Button>
-                        </Link>
                     </div>
                 </div>
 
@@ -151,7 +148,9 @@ export default function Revenue() {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-muted-foreground">Fully Paid Bookings</p>
-                                <p className="text-2xl font-bold text-amber-700">{stats.fullyPaidBookings} / {stats.totalBookings}</p>
+                                <p className="text-2xl font-bold text-amber-700">
+                                    {stats.fullyPaidBookings} / {stats.totalBookings}
+                                </p>
                             </div>
                             <div className="rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 p-2.5">
                                 <CheckCircle className="h-5 w-5 text-white" />
@@ -193,7 +192,7 @@ export default function Revenue() {
                                 data={recentReceipts || []}
                                 searchKey="book_id"
                                 filterOptions={{
-                                    'paymentType': paymentTypeOptions || [],
+                                    paymentType: paymentTypeOptions || [],
                                 }}
                             />
                         </div>
