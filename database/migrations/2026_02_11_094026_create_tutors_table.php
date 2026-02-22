@@ -21,12 +21,10 @@ return new class extends Migration
             $table->text('subject')->nullable();
             $table->text('nickname')->nullable();
             $table->longText('specializations')->nullable();
-            $table->decimal('rate_per_hour', 10, 2)->nullable();
             $table->string('photo')->nullable();
             $table->text('bio')->nullable();
             $table->enum('status', ['active', 'inactive'])->default('inactive');
             $table->string('portfolio_link')->nullable();
-            $table->string('mop')->nullable();
             $table->string('number')->nullable();
 
             $table->timestamps();

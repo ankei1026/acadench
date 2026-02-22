@@ -51,7 +51,18 @@ class AdminRefundRequestController extends Controller
             'pending_requests' => RefundRequest::where('status', 'pending')->count(),
             'approved_requests' => RefundRequest::where('status', 'approved')->count(),
             'rejected_requests' => RefundRequest::where('status', 'rejected')->count(),
-            'total_refunded' => RefundRequest::where('status', 'approved')->sum('amount'),
+            // Only sum actual refunded amounts (not full booking amount)
+            'total_refunded' => RefundRequest::where('status', 'approved')->get()->sum(function ($refund) {
+                // If payment type is downpayment, only refund downpayment
+                $booking = $refund->booking;
+                $downpaymentReceipt = $booking ? $booking->receipts->where('payment_type', 'downpayment')->first() : null;
+                if ($downpaymentReceipt) {
+                    return $downpaymentReceipt->amount;
+                } else {
+                    // Otherwise, refund only what was paid
+                    return $booking ? $booking->receipts->sum('amount') : 0;
+                }
+            }),
         ];
 
         return Inertia::render('Admin/RefundRequests/Index', [

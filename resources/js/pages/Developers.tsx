@@ -22,7 +22,7 @@ export default function TutorApplication() {
             name: 'Ralf Louie Ranario',
             role: 'Frontend Developer',
             description: 'Creates intuitive user interfaces and enhances user experience.',
-            imageUrl: '/assets/ryan.png',
+            imageUrl: '/assets/Ryan.png',
             color: 'from-amber-500/90 to-orange-600/90',
             delay: 0.1
         },
@@ -46,7 +46,7 @@ export default function TutorApplication() {
             name: 'PrienceArhnamael Suan Polvorosa',
             role: 'Backend Developer',
             description: 'Builds robust, scalable systems that power seamless applications.',
-            imageUrl: '/assets/prince.png',
+            imageUrl: '/assets/Prince.png',
             color: 'from-amber-500/90 to-orange-600/90',
             delay: 0.4
         },

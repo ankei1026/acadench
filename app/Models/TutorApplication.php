@@ -60,7 +60,7 @@ class TutorApplication extends Model
         'distance_from_work_minutes',
         'transportation_mode',
 
-        // Ratings and Preferences
+        // Ratings
         'enjoy_playing_with_kids_rating',
         'preferred_toys_games',
         'annoyances',
@@ -96,11 +96,12 @@ class TutorApplication extends Model
         'recording_comfort',
         'ok_with_media_usage',
 
-        // Application Status and Documents
+        // Final Review
         'subject',
         'document_path',
         'status',
         'notes',
+        'message', // Add this if you have it in your form
     ];
 
     protected $casts = [
@@ -129,21 +130,18 @@ class TutorApplication extends Model
         'annoyances' => 'array',
         'preferred_workdays' => 'array',
 
-        // Enums
-        'gender' => 'string',
-        'living_status' => 'string',
-        'employment_status' => 'string',
-        'work_preference' => 'string',
-        'class_size_preference' => 'string',
-        'transportation_mode' => 'string',
-        'edtech_opinion' => 'string',
-        'expected_tenure' => 'string',
-        'preferred_workdays_frequency' => 'string',
-        'preferred_schedule' => 'string',
-        'teaching_style_preference' => 'string',
-        'recording_comfort' => 'string',
-        'preferred_teaching_language' => 'string',
-        'status' => 'string',
+        // Integers
+        'distance_from_hub_minutes' => 'integer',
+        'distance_from_work_minutes' => 'integer',
+        'enjoy_playing_with_kids_rating' => 'integer',
+        'need_job_rating' => 'integer',
+        'public_speaking_rating' => 'integer',
+        'penmanship_rating' => 'integer',
+        'creativity_rating' => 'integer',
+        'english_proficiency_rating' => 'integer',
+        'cleanliness_importance_rating' => 'integer',
+        'organization_importance_rating' => 'integer',
+        'shared_environment_comfort_rating' => 'integer',
     ];
 
     // Optional: Add accessors/mutators for better data handling

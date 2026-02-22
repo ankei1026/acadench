@@ -55,6 +55,14 @@ class Booking extends Model
         return 'book_id';
     }
 
+    /**
+     * Get the parent (user) who made the booking.
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
     public function parent(): BelongsTo
     {
         return $this->belongsTo(User::class, 'parent_id');

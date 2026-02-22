@@ -15,8 +15,11 @@ class AdminRevenueController extends Controller
     {
         $paymentTypes = PaymentType::orderBy('created_at', 'desc')->get();
 
-        // Get all paid receipts
-        $receipts = Receipt::with(['booking', 'paymentType'])->get();
+        // Get all paid receipts with proper relationships
+        $receipts = Receipt::with([
+            'booking.learner.parent', // This gets the parent through learner
+            'paymentType'
+        ])->get();
 
         // Calculate revenue stats
         $totalPaid = $receipts->sum('amount');
@@ -47,12 +50,18 @@ class AdminRevenueController extends Controller
             }
         }
 
-        // Get recent receipts with all needed fields
-        $recentReceipts = Receipt::with(['booking', 'paymentType'])
+        // Get recent receipts with all needed fields - access parent through learner
+        $recentReceipts = Receipt::with([
+                'booking.learner.parent',
+                'paymentType'
+            ])
             ->orderBy('created_at', 'desc')
             ->take(50)
             ->get()
             ->map(function ($receipt) {
+                // Get parent name through learner relationship
+                $parentName = $receipt->booking?->learner?->parent?->name;
+
                 return [
                     'receipt_id' => $receipt->receipt_id,
                     'book_id' => $receipt->book_id,
@@ -63,6 +72,16 @@ class AdminRevenueController extends Controller
                     ] : null,
                     'receipt_image' => $receipt->receipt_image ? asset('storage/' . $receipt->receipt_image) : null,
                     'created_at' => $receipt->created_at?->format('Y-m-d H:i:s'),
+                    'parent_name' => $parentName,
+                    'learner_name' => $receipt->booking?->learner?->name,
+                    'booking' => $receipt->booking ? [
+                        'book_id' => $receipt->booking->book_id,
+                        'learner' => $receipt->booking->learner ? [
+                            'learner_id' => $receipt->booking->learner->learner_id,
+                            'name' => $receipt->booking->learner->name,
+                            'nickname' => $receipt->booking->learner->nickname,
+                        ] : null,
+                    ] : null,
                 ];
             });
 

@@ -49,17 +49,101 @@ class AdminTutorApplicationController extends Controller
 
         return Inertia::render('Admin/TutorApplication/Show', [
             'application' => [
+                // Personal Information
                 'id' => $application->id,
                 'full_name' => $application->full_name,
                 'email' => $application->email,
                 'phone' => $application->phone,
+                'birthdate' => $application->birthdate?->format('Y-m-d'),
+                'age' => $application->age,
+                'gender' => $application->gender,
+                'home_address' => $application->home_address,
+                'contact_number' => $application->contact_number,
+                'facebook_link' => $application->facebook_link,
+                'mother_name' => $application->mother_name,
+                'father_name' => $application->father_name,
+                'living_status' => $application->living_status,
+
+                // Educational Background
+                'high_school' => $application->high_school,
+                'college_school' => $application->college_school,
+                'college_course' => $application->college_course,
+                'is_licensed_teacher' => $application->is_licensed_teacher,
+                'license_date' => $application->license_date?->format('Y-m-d'),
+
+                // Teaching Experience
+                'employment_status' => $application->employment_status,
+                'current_employer' => $application->current_employer,
+                'working_hours' => $application->working_hours,
+                'tutoring_experience_levels' => $application->tutoring_experience_levels ?? [],
+                'tutoring_experience_duration' => $application->tutoring_experience_duration,
+                'has_school_teaching_experience' => $application->has_school_teaching_experience,
+                'school_teaching_experience_duration' => $application->school_teaching_experience_duration,
+                'previous_clients' => $application->previous_clients,
+
+                // Preferences and Skills
+                'favorite_subject_to_teach' => $application->favorite_subject_to_teach,
+                'easiest_subject_to_teach' => $application->easiest_subject_to_teach,
+                'most_difficult_subject_to_teach' => $application->most_difficult_subject_to_teach,
+                'easier_school_level_to_teach' => $application->easier_school_level_to_teach,
+                'harder_school_level_to_teach' => $application->harder_school_level_to_teach,
+                'reasons_love_teaching' => $application->reasons_love_teaching ?? [],
+                'work_preference' => $application->work_preference,
+                'class_size_preference' => $application->class_size_preference,
+                'teaching_values' => $application->teaching_values ?? [],
+                'application_reasons' => $application->application_reasons ?? [],
+                'outside_activities' => $application->outside_activities ?? [],
+
+                // Logistics
+                'distance_from_hub_minutes' => $application->distance_from_hub_minutes ?? 0,
+                'distance_from_work_minutes' => $application->distance_from_work_minutes ?? 0,
+                'transportation_mode' => $application->transportation_mode,
+
+                // Ratings and Preferences
+                'enjoy_playing_with_kids_rating' => $application->enjoy_playing_with_kids_rating ?? 0,
+                'preferred_toys_games' => $application->preferred_toys_games ?? [],
+                'annoyances' => $application->annoyances ?? [],
+                'need_job_rating' => $application->need_job_rating ?? 0,
+                'public_speaking_rating' => $application->public_speaking_rating ?? 0,
+                'penmanship_rating' => $application->penmanship_rating ?? 0,
+                'creativity_rating' => $application->creativity_rating ?? 0,
+                'english_proficiency_rating' => $application->english_proficiency_rating ?? 0,
+                // Valid values: 'English', 'Filipino', 'Both' (meaning both English and Filipino)
+                'preferred_teaching_language' => $application->preferred_teaching_language,
+
+                // Technology and Teaching Methods
+                'edtech_opinion' => $application->edtech_opinion,
+                'needs_phone_while_teaching' => $application->needs_phone_while_teaching,
+                'phone_usage_reason' => $application->phone_usage_reason,
+                'teaching_difficulty_approach' => $application->teaching_difficulty_approach,
+                'discipline_approach' => $application->discipline_approach,
+                'approves_late_fine_reward' => $application->approves_late_fine_reward,
+                'late_fine_reason' => $application->late_fine_reason,
+                'expected_tenure' => $application->expected_tenure,
+
+                // Commitment
+                'preferred_workdays' => $application->preferred_workdays ?? [],
+                'preferred_workdays_frequency' => $application->preferred_workdays_frequency,
+                'preferred_schedule' => $application->preferred_schedule,
+
+                // Work Environment Preferences
+                'cleanliness_importance_rating' => $application->cleanliness_importance_rating ?? 0,
+                'organization_importance_rating' => $application->organization_importance_rating ?? 0,
+                'shared_environment_comfort_rating' => $application->shared_environment_comfort_rating ?? 0,
+                'teaching_style_preference' => $application->teaching_style_preference,
+                'ok_with_team_meetings' => $application->ok_with_team_meetings,
+                'ok_with_parent_meetings' => $application->ok_with_parent_meetings,
+                'recording_comfort' => $application->recording_comfort,
+                'ok_with_media_usage' => $application->ok_with_media_usage,
+
+                // Final Review
                 'subject' => $application->subject,
-                'message' => $application->message,
                 'document_path' => $application->document_path,
                 'document_url' => $application->document_path
                     ? asset('storage/' . $application->document_path)
                     : null,
                 'status' => $application->status,
+                'notes' => $application->notes,
                 'created_at' => $application->created_at?->format('Y-m-d H:i:s'),
                 'formatted_date' => $application->created_at?->diffForHumans(),
             ],
@@ -82,13 +166,12 @@ class AdminTutorApplicationController extends Controller
 
             if (!$user) {
                 // Generate secure random password
-                $temporaryPassword = Str::random(12); // Better than hardcoded password
+                $temporaryPassword = Str::random(12);
 
                 // Create User
                 $user = User::create([
                     'name' => $application->full_name,
                     'email' => $application->email,
-                    'phone_number' => $application->phone, // Store phone number
                     'password' => bcrypt($temporaryPassword),
                     'role' => 'tutor',
                     'email_verified_at' => now(),
@@ -96,17 +179,114 @@ class AdminTutorApplicationController extends Controller
 
                 $isNewUser = true;
 
-                // Create Tutor profile
-                Tutor::create([
+                // Create Tutor profile with ALL application fields
+                $tutorData = [
                     'user_id' => $user->id,
                     'subject' => $application->subject ?? 'General',
-                    'specializations' => $application->message, // Store their message as initial bio
-                    'status' => 'inactive',
+                    'specializations' => $application->message,
+                    'status' => 'active', // Set to active instead of inactive
                     'number' => $application->phone,
-                ]);
+
+                    // Personal Information
+                    'full_name' => $application->full_name,
+                    'email' => $application->email,
+                    'birthdate' => $application->birthdate,
+                    'age' => $application->age,
+                    'gender' => $application->gender,
+                    'home_address' => $application->home_address,
+                    'facebook_link' => $application->facebook_link,
+                    'mother_name' => $application->mother_name,
+                    'father_name' => $application->father_name,
+                    'living_status' => $application->living_status,
+
+                    // Educational Background
+                    'high_school' => $application->high_school,
+                    'college_school' => $application->college_school,
+                    'college_course' => $application->college_course,
+                    'is_licensed_teacher' => $application->is_licensed_teacher,
+                    'license_date' => $application->license_date,
+
+                    // Teaching Experience
+                    'employment_status' => $application->employment_status,
+                    'current_employer' => $application->current_employer,
+                    'working_hours' => $application->working_hours,
+                    'tutoring_experience_levels' => $application->tutoring_experience_levels,
+                    'tutoring_experience_duration' => $application->tutoring_experience_duration,
+                    'has_school_teaching_experience' => $application->has_school_teaching_experience,
+                    'school_teaching_experience_duration' => $application->school_teaching_experience_duration,
+                    'previous_clients' => $application->previous_clients,
+
+                    // Preferences and Skills
+                    'favorite_subject_to_teach' => $application->favorite_subject_to_teach,
+                    'easiest_subject_to_teach' => $application->easiest_subject_to_teach,
+                    'most_difficult_subject_to_teach' => $application->most_difficult_subject_to_teach,
+                    'easier_school_level_to_teach' => $application->easier_school_level_to_teach,
+                    'harder_school_level_to_teach' => $application->harder_school_level_to_teach,
+                    'reasons_love_teaching' => $application->reasons_love_teaching,
+                    'work_preference' => $application->work_preference,
+                    'class_size_preference' => $application->class_size_preference,
+                    'teaching_values' => $application->teaching_values,
+                    'application_reasons' => $application->application_reasons,
+                    'outside_activities' => $application->outside_activities,
+
+                    // Logistics
+                    'distance_from_hub_minutes' => $application->distance_from_hub_minutes,
+                    'distance_from_work_minutes' => $application->distance_from_work_minutes,
+                    'transportation_mode' => $application->transportation_mode,
+
+                    // Ratings and Preferences
+                    'enjoy_playing_with_kids_rating' => $application->enjoy_playing_with_kids_rating,
+                    'preferred_toys_games' => $application->preferred_toys_games,
+                    'annoyances' => $application->annoyances,
+                    'need_job_rating' => $application->need_job_rating,
+                    'public_speaking_rating' => $application->public_speaking_rating,
+                    'penmanship_rating' => $application->penmanship_rating,
+                    'creativity_rating' => $application->creativity_rating,
+                    'english_proficiency_rating' => $application->english_proficiency_rating,
+                    'preferred_teaching_language' => $application->preferred_teaching_language,
+
+                    // Technology and Teaching Methods
+                    'edtech_opinion' => $application->edtech_opinion,
+                    'needs_phone_while_teaching' => $application->needs_phone_while_teaching,
+                    'phone_usage_reason' => $application->phone_usage_reason,
+                    'teaching_difficulty_approach' => $application->teaching_difficulty_approach,
+                    'discipline_approach' => $application->discipline_approach,
+                    'approves_late_fine_reward' => $application->approves_late_fine_reward,
+                    'late_fine_reason' => $application->late_fine_reason,
+                    'expected_tenure' => $application->expected_tenure,
+
+                    // Commitment
+                    'preferred_workdays' => $application->preferred_workdays,
+                    'preferred_workdays_frequency' => $application->preferred_workdays_frequency,
+                    'preferred_schedule' => $application->preferred_schedule,
+
+                    // Work Environment Preferences
+                    'cleanliness_importance_rating' => $application->cleanliness_importance_rating,
+                    'organization_importance_rating' => $application->organization_importance_rating,
+                    'shared_environment_comfort_rating' => $application->shared_environment_comfort_rating,
+                    'teaching_style_preference' => $application->teaching_style_preference,
+                    'ok_with_team_meetings' => $application->ok_with_team_meetings,
+                    'ok_with_parent_meetings' => $application->ok_with_parent_meetings,
+                    'recording_comfort' => $application->recording_comfort,
+                    'ok_with_media_usage' => $application->ok_with_media_usage,
+                ];
+
+                Tutor::create($tutorData);
 
                 // Send welcome SMS with credentials
                 $this->sendWelcomeSms($application, $temporaryPassword);
+            } else {
+                // If user already exists, update their tutor profile with application data
+                $tutor = Tutor::where('user_id', $user->id)->first();
+                if ($tutor) {
+                    $tutor->update([
+                        'subject' => $application->subject ?? $tutor->subject,
+                        'specializations' => $application->message ?? $tutor->specializations,
+                        'number' => $application->phone ?? $tutor->number,
+                        'status' => 'active',
+                        // Add other fields as needed
+                    ]);
+                }
             }
 
             // Update application status
@@ -116,8 +296,8 @@ class AdminTutorApplicationController extends Controller
             $user->notify(new TutorApplicationStatusNotification($application, 'approved'));
 
             $message = $isNewUser
-                ? "Application approved! New tutor account created. Login credentials sent via SMS."
-                : "Application approved! Tutor already had an account.";
+                ? "Application approved! New tutor account created with all application data. Login credentials sent via SMS."
+                : "Application approved! Tutor profile updated with application data.";
 
             return back()->with('success', $message);
 

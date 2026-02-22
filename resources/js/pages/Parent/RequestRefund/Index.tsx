@@ -25,7 +25,9 @@ import {
     Send,
     CheckCircle2,
     Info,
+    Receipt,
 } from 'lucide-react';
+import { toast } from '@/components/ui/use-toast';
 
 interface Booking {
     book_id: string;
@@ -44,6 +46,8 @@ interface Booking {
     booking_status: string;
     total_paid: number;
     remaining_balance: number;
+    payment_types?: string;
+    receipt_count?: number;
 }
 
 interface PageProps {
@@ -89,12 +93,15 @@ export default function Home({ bookings }: PageProps) {
         }
     }, [successMessage, step, selectedBooking]);
 
-    // Filter bookings that haven't started yet (book_date is in the future)
+    // Filter bookings that haven't started yet (book_date is in the future) and have payments
     const eligibleBookings = bookings.filter((booking) => {
         const bookDate = new Date(booking.book_date);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        return bookDate > today && booking.booking_status !== 'completed' && booking.booking_status !== 'cancelled';
+        return bookDate > today &&
+               booking.booking_status !== 'completed' &&
+               booking.booking_status !== 'cancelled' &&
+               booking.total_paid > 0; // Only show bookings with payments
     });
 
     const selected = selectedBooking ? eligibleBookings.find((b) => b.book_id === selectedBooking) : null;
@@ -138,6 +145,13 @@ export default function Home({ bookings }: PageProps) {
             },
             {
                 onFinish: () => setLoading(false),
+                onSuccess: () => {
+                    toast({
+                        title: 'Refund Request Submitted',
+                        description: 'Your refund request has been submitted and is pending review.',
+                        variant: 'success',
+                    });
+                },
                 onError: (errors: any) => {
                     console.error('Refund request error:', errors);
                     const errorMessage = errors.reason || errors.book_id || 'Failed to submit refund request. Please try again.';
@@ -188,88 +202,93 @@ export default function Home({ bookings }: PageProps) {
                                     Request a Refund
                                 </h1>
                             </div>
-                            <p className="ml-2 text-gray-600">Submit a refund request for your downpayment</p>
+                            <p className="ml-2 text-gray-600">Submit a refund request for your paid amount</p>
                         </div>
                         <Link href="/parent/my-refund-requests">
-                            <Button variant="outline" className="whitespace-nowrap border-amber-200 hover:bg-amber-50">
+                            <Button variant="outline" className="border-amber-200 whitespace-nowrap hover:bg-amber-50">
                                 View My Requests
                             </Button>
                         </Link>
                     </div>
                 </div>
 
-                    {/* Steps Indicator */}
-                    {eligibleBookings.length > 0 && (
-                        <div className="mb-8">
-                            <div className="flex items-center justify-center gap-2">
-                                <div className={`flex items-center ${step === 'select' ? 'text-orange-600' : 'text-green-600'}`}>
-                                    <div
-                                        className={`flex h-8 w-8 items-center justify-center rounded-full ${
-                                            step === 'select'
-                                                ? 'bg-orange-600 text-white'
-                                                : step === 'confirmation'
-                                                  ? 'bg-green-600 text-white'
-                                                  : 'bg-gray-200 text-gray-600'
-                                        }`}
-                                    >
-                                        {step === 'confirmation' ? <CheckCircle2 className="h-5 w-5" /> : 1}
-                                    </div>
-                                    <span className="ml-2 text-sm font-medium">Select Booking</span>
-                                </div>
-                                <ChevronRight className="h-5 w-5 text-gray-400" />
+                {/* Steps Indicator */}
+                {eligibleBookings.length > 0 && (
+                    <div className="mb-8">
+                        <div className="flex items-center justify-center gap-2">
+                            <div className={`flex items-center ${step === 'select' ? 'text-orange-600' : 'text-green-600'}`}>
                                 <div
-                                    className={`flex items-center ${step === 'form' ? 'text-blue-600' : step === 'confirmation' ? 'text-green-600' : 'text-gray-400'}`}
+                                    className={`flex h-8 w-8 items-center justify-center rounded-full ${
+                                        step === 'select'
+                                            ? 'bg-orange-600 text-white'
+                                            : step === 'confirmation'
+                                              ? 'bg-green-600 text-white'
+                                              : 'bg-gray-200 text-gray-600'
+                                    }`}
                                 >
-                                    <div
-                                        className={`flex h-8 w-8 items-center justify-center rounded-full ${
-                                            step === 'form'
-                                                ? 'bg-blue-600 text-white'
-                                                : step === 'confirmation'
-                                                  ? 'bg-green-600 text-white'
-                                                  : 'bg-gray-200 text-gray-600'
-                                        }`}
-                                    >
-                                        {step === 'confirmation' ? <CheckCircle2 className="h-5 w-5" /> : 2}
-                                    </div>
-                                    <span className="ml-2 text-sm font-medium">Provide Reason</span>
+                                    {step === 'confirmation' ? <CheckCircle2 className="h-5 w-5" /> : 1}
                                 </div>
-                                <ChevronRight className="h-5 w-5 text-gray-400" />
-                                <div className={`flex items-center ${step === 'confirmation' ? 'text-green-600' : 'text-gray-400'}`}>
-                                    <div
-                                        className={`flex h-8 w-8 items-center justify-center rounded-full ${
-                                            step === 'confirmation' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-600'
-                                        }`}
-                                    >
-                                        3
-                                    </div>
-                                    <span className="ml-2 text-sm font-medium">Confirmation</span>
+                                <span className="ml-2 text-sm font-medium">Select Booking</span>
+                            </div>
+                            <ChevronRight className="h-5 w-5 text-gray-400" />
+                            <div
+                                className={`flex items-center ${step === 'form' ? 'text-blue-600' : step === 'confirmation' ? 'text-green-600' : 'text-gray-400'}`}
+                            >
+                                <div
+                                    className={`flex h-8 w-8 items-center justify-center rounded-full ${
+                                        step === 'form'
+                                            ? 'bg-blue-600 text-white'
+                                            : step === 'confirmation'
+                                              ? 'bg-green-600 text-white'
+                                              : 'bg-gray-200 text-gray-600'
+                                    }`}
+                                >
+                                    {step === 'confirmation' ? <CheckCircle2 className="h-5 w-5" /> : 2}
                                 </div>
+                                <span className="ml-2 text-sm font-medium">Provide Reason</span>
+                            </div>
+                            <ChevronRight className="h-5 w-5 text-gray-400" />
+                            <div className={`flex items-center ${step === 'confirmation' ? 'text-green-600' : 'text-gray-400'}`}>
+                                <div
+                                    className={`flex h-8 w-8 items-center justify-center rounded-full ${
+                                        step === 'confirmation' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-600'
+                                    }`}
+                                >
+                                    3
+                                </div>
+                                <span className="ml-2 text-sm font-medium">Confirmation</span>
                             </div>
                         </div>
-                    )}
+                    </div>
+                )}
 
                 {/* Info Alert */}
-                <Alert className="border-amber-200 bg-amber-50/50 backdrop-blur-sm shadow-sm">
+                <Alert className="border-amber-200 bg-amber-50/50 shadow-sm backdrop-blur-sm">
                     <Info className="h-5 w-5 text-amber-600" />
                     <AlertTitle className="font-semibold text-amber-900">Refund Policy</AlertTitle>
                     <AlertDescription className="text-amber-800">
-                        You can request a refund of your downpayment for bookings that haven't started yet. Refund requests must be submitted
-                        before your session start date. Once approved, refunds are processed through <strong>Soraya Learning Hub</strong> within
-                        3-5 business days.
+                        You can request a refund for bookings that haven't started yet. The refund amount will be the total amount you've paid for this booking.
+                        Refund requests must be submitted before your session start date. Once approved, refunds are processed through{' '}
+                        <strong>Soraya Learning Hub</strong> within 3-5 business days.
                     </AlertDescription>
                 </Alert>
 
                 {eligibleBookings.length === 0 ? (
-                    <Card className="border-2 border-dashed border-amber-200 bg-white/50 backdrop-blur-sm shadow-sm">
+                    <Card className="border-2 border-dashed border-amber-200 bg-white/50 shadow-sm backdrop-blur-sm">
                         <CardContent className="flex flex-col items-center justify-center py-16">
                             <div className="rounded-full bg-amber-100 p-4">
                                 <AlertTriangle className="h-12 w-12 text-amber-500" />
                             </div>
                             <h3 className="mt-4 text-xl font-semibold text-gray-900">No Eligible Bookings</h3>
                             <p className="mt-2 max-w-md text-center text-gray-600">
-                                You can only request refunds for bookings that haven't started yet. Check back when you have upcoming sessions.
+                                You can only request refunds for bookings that haven't started yet and have payments made.
+                                Check back when you have upcoming sessions with payments.
                             </p>
-                            <Button variant="outline" className="mt-6 border-amber-200 hover:bg-amber-50" onClick={() => router.visit('/parent/book-program/bookings')}>
+                            <Button
+                                variant="outline"
+                                className="mt-6 border-amber-200 hover:bg-amber-50"
+                                onClick={() => router.visit('/parent/book-program/bookings')}
+                            >
                                 View My Bookings
                             </Button>
                         </CardContent>
@@ -278,274 +297,319 @@ export default function Home({ bookings }: PageProps) {
                     <>
                         {step === 'select' && (
                             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                                    {eligibleBookings.map((booking) => {
-                                        const daysUntil = getDaysUntilStart(booking.book_date);
-                                        return (
-                                            <Card
-                                                key={booking.book_id}
-                                                className="group cursor-pointer border border-amber-100 bg-gradient-to-br from-white to-amber-50/30 transition-all hover:border-amber-300 hover:shadow-md"
-                                                onClick={() => handleSelectBooking(booking.book_id)}
-                                            >
-                                                <CardHeader className="pb-3">
-                                                    <div className="flex items-start justify-between">
-                                                        <Badge className="border-amber-200 bg-amber-100 text-amber-700">
-                                                            {daysUntil} {daysUntil === 1 ? 'day' : 'days'} left
-                                                        </Badge>
-                                                        <Badge variant="outline" className="bg-green-50 border-green-200 text-green-700">
-                                                            ₱{booking.remaining_balance.toLocaleString()}
-                                                        </Badge>
-                                                    </div>
-                                                    <CardTitle className="mt-2 text-lg">{booking.program}</CardTitle>
-                                                    <CardDescription className="flex items-center gap-1">
-                                                        <User className="h-3 w-3" />
-                                                        {booking.learner?.name || booking.learner?.nickname}
-                                                    </CardDescription>
-                                                </CardHeader>
-                                                <CardContent className="pb-3">
-                                                    <div className="space-y-2 text-sm">
-                                                        <div className="flex items-center gap-2 text-gray-600">
-                                                            <Calendar className="h-4 w-4" />
-                                                            <span>Starts {formatDate(booking.book_date)}</span>
-                                                        </div>
-                                                        <div className="flex items-center gap-2 text-gray-600">
-                                                            <BookOpen className="h-4 w-4" />
-                                                            <span>{booking.session_count} sessions</span>
-                                                        </div>
-                                                    </div>
-                                                </CardContent>
-                                                <CardFooter className="border-t border-amber-100 pt-3 bg-amber-50/30">
-                                                    <Button variant="ghost" className="w-full group-hover:bg-amber-100 group-hover:text-amber-700 transition-colors">
-                                                        Select Booking
-                                                        <ChevronRight className="ml-2 h-4 w-4" />
-                                                    </Button>
-                                                </CardFooter>
-                                            </Card>
-                                        );
-                                    })}
-                                </div>
-                            )}
-
-                            {step === 'form' && selected && (
-                                <div className="grid gap-6 lg:grid-cols-3">
-                                    {/* Booking Summary Card */}
-                                    <div className="lg:col-span-1">
-                                        <Card className="sticky top-6 border-amber-100 bg-gradient-to-br from-amber-50 to-orange-50/30 shadow-sm">
-                                            <CardHeader>
-                                                <CardTitle className="text-lg">Booking Summary</CardTitle>
+                                {eligibleBookings.map((booking) => {
+                                    const daysUntil = getDaysUntilStart(booking.book_date);
+                                    return (
+                                        <Card
+                                            key={booking.book_id}
+                                            className="group cursor-pointer border border-amber-100 bg-gradient-to-br from-white to-amber-50/30 transition-all hover:border-amber-300 hover:shadow-md"
+                                            onClick={() => handleSelectBooking(booking.book_id)}
+                                        >
+                                            <CardHeader className="pb-3">
+                                                <div className="flex items-start justify-between">
+                                                    <Badge className="border-amber-200 bg-amber-100 text-amber-700">
+                                                        {daysUntil} {daysUntil === 1 ? 'day' : 'days'} left
+                                                    </Badge>
+                                                    <Badge variant="outline" className="border-green-200 bg-green-50 text-green-700">
+                                                        Paid: {formatCurrency(booking.total_paid)}
+                                                    </Badge>
+                                                </div>
+                                                <CardTitle className="mt-2 text-lg">{booking.program}</CardTitle>
+                                                <CardDescription className="flex items-center gap-1">
+                                                    <User className="h-3 w-3" />
+                                                    {booking.learner?.name || booking.learner?.nickname}
+                                                </CardDescription>
                                             </CardHeader>
-                                            <CardContent className="space-y-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="rounded-full bg-gradient-to-r from-amber-500 to-orange-500 p-2">
-                                                        <BookOpen className="h-5 w-5 text-white" />
+                                            <CardContent className="pb-3">
+                                                <div className="space-y-2 text-sm">
+                                                    <div className="flex items-center gap-2 text-gray-600">
+                                                        <Calendar className="h-4 w-4" />
+                                                        <span>Starts {formatDate(booking.book_date)}</span>
                                                     </div>
-                                                    <div>
-                                                        <p className="text-sm text-gray-500">Program</p>
-                                                        <p className="font-semibold">{selected.program}</p>
+                                                    <div className="flex items-center gap-2 text-gray-600">
+                                                        <BookOpen className="h-4 w-4" />
+                                                        <span>{booking.session_count} sessions</span>
                                                     </div>
+                                                    {booking.receipt_count && booking.receipt_count > 0 && (
+                                                        <div className="flex items-center gap-2 text-gray-600">
+                                                            <Receipt className="h-4 w-4" />
+                                                            <span>{booking.receipt_count} payment(s) made</span>
+                                                        </div>
+                                                    )}
                                                 </div>
+                                            </CardContent>
+                                            <CardFooter className="border-t border-amber-100 bg-amber-50/30 pt-3">
+                                                <Button
+                                                    variant="ghost"
+                                                    className="w-full transition-colors group-hover:bg-amber-100 group-hover:text-amber-700"
+                                                >
+                                                    Select Booking
+                                                    <ChevronRight className="ml-2 h-4 w-4" />
+                                                </Button>
+                                            </CardFooter>
+                                        </Card>
+                                    );
+                                })}
+                            </div>
+                        )}
 
-                                                <Separator className="bg-amber-100" />
-
-                                                <div className="flex items-center gap-3">
-                                                    <div className="rounded-full bg-gradient-to-r from-purple-500 to-pink-500 p-2">
-                                                        <User className="h-5 w-5 text-white" />
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-sm text-gray-500">Learner</p>
-                                                        <p className="font-semibold">{selected.learner?.name || selected.learner?.nickname}</p>
-                                                    </div>
+                        {step === 'form' && selected && (
+                            <div className="grid gap-6 lg:grid-cols-3">
+                                {/* Booking Summary Card */}
+                                <div className="lg:col-span-1">
+                                    <Card className="sticky top-6 border-amber-100 bg-gradient-to-br from-amber-50 to-orange-50/30 shadow-sm">
+                                        <CardHeader>
+                                            <CardTitle className="text-lg">Payment Summary</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="space-y-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="rounded-full bg-gradient-to-r from-amber-500 to-orange-500 p-2">
+                                                    <BookOpen className="h-5 w-5 text-white" />
                                                 </div>
-
-                                                <Separator className="bg-amber-100" />
-
-                                                <div className="flex items-center gap-3">
-                                                    <div className="rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 p-2">
-                                                        <Calendar className="h-5 w-5 text-white" />
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-sm text-gray-500">Start Date</p>
-                                                        <p className="font-semibold">{formatDate(selected.book_date)}</p>
-                                                    </div>
+                                                <div>
+                                                    <p className="text-sm text-gray-500">Program</p>
+                                                    <p className="font-semibold">{selected.program}</p>
                                                 </div>
+                                            </div>
 
-                                                <Separator className="bg-amber-100" />
+                                            <Separator className="bg-amber-100" />
 
+                                            <div className="flex items-center gap-3">
+                                                <div className="rounded-full bg-gradient-to-r from-purple-500 to-pink-500 p-2">
+                                                    <User className="h-5 w-5 text-white" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm text-gray-500">Learner</p>
+                                                    <p className="font-semibold">{selected.learner?.name || selected.learner?.nickname}</p>
+                                                </div>
+                                            </div>
+
+                                            <Separator className="bg-amber-100" />
+
+                                            <div className="flex items-center gap-3">
+                                                <div className="rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 p-2">
+                                                    <Calendar className="h-5 w-5 text-white" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm text-gray-500">Start Date</p>
+                                                    <p className="font-semibold">{formatDate(selected.book_date)}</p>
+                                                </div>
+                                            </div>
+
+                                            <Separator className="bg-amber-100" />
+
+                                            <div className="space-y-3">
                                                 <div className="flex items-center gap-3">
                                                     <div className="rounded-full bg-gradient-to-r from-green-500 to-emerald-500 p-2">
                                                         <DollarSign className="h-5 w-5 text-white" />
                                                     </div>
                                                     <div>
-                                                        <p className="text-sm text-gray-500">Refund Amount</p>
-                                                        <p className="text-2xl font-bold text-green-600">
-                                                            {formatCurrency(selected.remaining_balance)}
-                                                        </p>
+                                                        <p className="text-sm text-gray-500">Total Booking Amount</p>
+                                                        <p className="font-semibold">{formatCurrency(selected.amount)}</p>
                                                     </div>
                                                 </div>
-                                            </CardContent>
-                                        </Card>
-                                    </div>
 
-                                    {/* Refund Form */}
-                                    <div className="lg:col-span-2">
-                                        <Card className="border-amber-100 shadow-sm">
-                                            <CardHeader className="border-b border-amber-100">
-                                                <CardTitle className="flex items-center gap-2">
-                                                    <div className="rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 p-2">
-                                                        <MessageSquare className="h-5 w-5 text-white" />
+                                                <div className="flex items-center gap-3">
+                                                    <div className="rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 p-2">
+                                                        <Receipt className="h-5 w-5 text-white" />
                                                     </div>
-                                                    Refund Request Form
-                                                </CardTitle>
-                                                <CardDescription>Please provide details about why you're requesting a refund</CardDescription>
-                                            </CardHeader>
-                                            <CardContent className="pt-6">
-                                                {error && (
-                                                    <Alert className="mb-4 border-red-200 bg-red-50 shadow-sm">
-                                                        <AlertCircle className="h-4 w-4 text-red-600" />
-                                                        <AlertDescription className="text-red-800">{error}</AlertDescription>
-                                                    </Alert>
+                                                    <div>
+                                                        <p className="text-sm text-gray-500">Amount Paid</p>
+                                                        <p className="text-2xl font-bold text-green-600">{formatCurrency(selected.total_paid)}</p>
+                                                        {selected.receipt_count && selected.receipt_count > 1 && (
+                                                            <p className="text-xs text-gray-500">From {selected.receipt_count} payments</p>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {selected.remaining_balance > 0 && (
+                                                    <div className="mt-2 rounded-lg bg-amber-50 p-3">
+                                                        <p className="text-xs text-amber-800">
+                                                            <strong>Note:</strong> You have an outstanding balance of {formatCurrency(selected.remaining_balance)}.
+                                                            Only the paid amount of {formatCurrency(selected.total_paid)} will be refunded.
+                                                        </p>
+                                                    </div>
                                                 )}
-                                                <form onSubmit={handleSubmit} className="space-y-6">
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="reason" className="text-base font-medium">
-                                                            Reason for Refund <span className="text-red-500">*</span>
-                                                        </Label>
-                                                        <Textarea
-                                                            id="reason"
-                                                            placeholder="Please explain your reason for requesting a refund..."
-                                                            value={reason}
-                                                            onChange={(e) => setReason(e.target.value)}
-                                                            rows={6}
-                                                            className="resize-none border-amber-100 focus:border-amber-300 focus:ring-amber-500"
-                                                            required
-                                                        />
-                                                        <p className="flex items-center gap-1 text-sm text-gray-500">
-                                                            <Info className="h-3 w-3" />
-                                                            Provide as much detail as possible to help us process your request
-                                                        </p>
-                                                    </div>
-
-                                                    {/* Important Notes */}
-                                                    <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50/50 p-4 backdrop-blur-sm">
-                                                        <div className="flex items-start gap-3">
-                                                            <Shield className="mt-0.5 h-5 w-5 text-amber-600" />
-                                                            <div>
-                                                                <h4 className="font-semibold text-amber-900">Refund Processing</h4>
-                                                                <p className="mt-1 text-sm text-amber-800">
-                                                                    Refunds are processed through <strong>Soraya Learning Hub</strong> and typically
-                                                                    take 3-5 business days after approval. You'll receive an email confirmation once
-                                                                    your request is processed.
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex items-start gap-3">
-                                                            <Clock className="mt-0.5 h-5 w-5 text-amber-600" />
-                                                            <div>
-                                                                <h4 className="font-semibold text-amber-900">Important Deadline</h4>
-                                                                <p className="mt-1 text-sm text-amber-800">
-                                                                    Your refund request must be submitted before{' '}
-                                                                    <strong>{formatDate(selected.book_date)}</strong>. Requests after this date may
-                                                                    not be eligible for refund.
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="flex gap-3 pt-4">
-                                                        <Button type="button" variant="outline" onClick={handleBack} className="flex-1 border-amber-200 hover:bg-amber-50">
-                                                            Back
-                                                        </Button>
-                                                        <Button
-                                                            type="submit"
-                                                            disabled={loading || !reason.trim()}
-                                                            className="flex-1 bg-gradient-to-r from-amber-600 to-orange-600 text-white hover:from-amber-700 hover:to-orange-700 shadow-md"
-                                                        >
-                                                            {loading ? (
-                                                                <>
-                                                                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                                                                    Submitting...
-                                                                </>
-                                                            ) : (
-                                                                <>
-                                                                    <Send className="mr-2 h-4 w-4" />
-                                                                    Submit Request
-                                                                </>
-                                                            )}
-                                                        </Button>
-                                                    </div>
-                                                </form>
-                                            </CardContent>
-                                        </Card>
-                                    </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
                                 </div>
-                            )}
 
-                            {step === 'confirmation' && selected && (
-                                <Card className="mx-auto max-w-2xl border-2 border-green-200 bg-green-50/30 shadow-md">
-                                    <CardContent className="pt-8 pb-6 text-center">
-                                        <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-r from-green-100 to-emerald-100">
-                                            <CheckCircle2 className="h-12 w-12 text-green-600" />
-                                        </div>
-                                        <h2 className="mb-2 text-2xl font-bold text-gray-900">Request Submitted!</h2>
-                                        <p className="mb-6 text-gray-600">
-                                            Your refund request for <strong>{selected.program}</strong> has been successfully submitted.
-                                        </p>
+                                {/* Refund Form */}
+                                <div className="lg:col-span-2">
+                                    <Card className="border-amber-100 shadow-sm">
+                                        <CardHeader className="border-b border-amber-100">
+                                            <CardTitle className="flex items-center gap-2">
+                                                <div className="rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 p-2">
+                                                    <MessageSquare className="h-5 w-5 text-white" />
+                                                </div>
+                                                Refund Request Form
+                                            </CardTitle>
+                                            <CardDescription>Please provide details about why you're requesting a refund</CardDescription>
+                                        </CardHeader>
+                                        <CardContent className="pt-6">
+                                            {error && (
+                                                <Alert className="mb-4 border-red-200 bg-red-50 shadow-sm">
+                                                    <AlertCircle className="h-4 w-4 text-red-600" />
+                                                    <AlertDescription className="text-red-800">{error}</AlertDescription>
+                                                </Alert>
+                                            )}
+                                            <form onSubmit={handleSubmit} className="space-y-6">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="reason" className="text-base font-medium">
+                                                        Reason for Refund <span className="text-red-500">*</span>
+                                                    </Label>
+                                                    <Textarea
+                                                        id="reason"
+                                                        placeholder="Please explain your reason for requesting a refund..."
+                                                        value={reason}
+                                                        onChange={(e) => setReason(e.target.value)}
+                                                        rows={6}
+                                                        className="resize-none border-amber-100 focus:border-amber-300 focus:ring-amber-500"
+                                                        required
+                                                    />
+                                                    <p className="flex items-center gap-1 text-sm text-gray-500">
+                                                        <Info className="h-3 w-3" />
+                                                        Provide as much detail as possible to help us process your request
+                                                    </p>
+                                                </div>
 
-                                        <div className="mb-6 rounded-lg border border-green-200 bg-white p-4 text-left shadow-sm">
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div>
-                                                    <p className="text-sm text-gray-500">Booking ID</p>
-                                                    <p className="font-mono font-medium text-gray-900">{selected.book_id}</p>
+                                                {/* Important Notes */}
+                                                <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50/50 p-4 backdrop-blur-sm">
+                                                    <div className="flex items-start gap-3">
+                                                        <Shield className="mt-0.5 h-5 w-5 text-amber-600" />
+                                                        <div>
+                                                            <h4 className="font-semibold text-amber-900">Refund Amount: {formatCurrency(selected.total_paid)}</h4>
+                                                            <p className="mt-1 text-sm text-amber-800">
+                                                                This is the total amount you've paid for this booking. The refund will be processed
+                                                                through <strong>Soraya Learning Hub</strong> and typically takes 3-5 business days
+                                                                after approval.
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-start gap-3">
+                                                        <Clock className="mt-0.5 h-5 w-5 text-amber-600" />
+                                                        <div>
+                                                            <h4 className="font-semibold text-amber-900">Important Deadline</h4>
+                                                            <p className="mt-1 text-sm text-amber-800">
+                                                                Your refund request must be submitted before{' '}
+                                                                <strong>{formatDate(selected.book_date)}</strong>. Requests after this date may not be
+                                                                eligible for refund.
+                                                            </p>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <p className="text-sm text-gray-500">Request Date</p>
-                                                    <p className="font-medium text-gray-900">{formatDate(new Date().toISOString())}</p>
+
+                                                <div className="flex gap-3 pt-4">
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        onClick={handleBack}
+                                                        className="flex-1 border-amber-200 hover:bg-amber-50"
+                                                    >
+                                                        Back
+                                                    </Button>
+                                                    <Button
+                                                        type="submit"
+                                                        disabled={loading || !reason.trim()}
+                                                        className="flex-1 bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-md hover:from-amber-700 hover:to-orange-700"
+                                                    >
+                                                        {loading ? (
+                                                            <>
+                                                                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                                                                Submitting...
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Send className="mr-2 h-4 w-4" />
+                                                                Submit Request
+                                                            </>
+                                                        )}
+                                                    </Button>
                                                 </div>
-                                                <div>
-                                                    <p className="text-sm text-gray-500">Refund Amount</p>
-                                                    <p className="font-bold text-green-600">{formatCurrency(selected.remaining_balance)}</p>
-                                                </div>
-                                                <div>
-                                                    <p className="text-sm text-gray-500">Status</p>
-                                                    <Badge className="border-yellow-200 bg-yellow-100 text-yellow-800 mt-1">Pending Review</Badge>
-                                                </div>
+                                            </form>
+                                        </CardContent>
+                                    </Card>
+                                </div>
+                            </div>
+                        )}
+
+                        {step === 'confirmation' && selected && (
+                            <Card className="mx-auto max-w-2xl border-2 border-green-200 bg-green-50/30 shadow-md">
+                                <CardContent className="pt-8 pb-6 text-center">
+                                    <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-r from-green-100 to-emerald-100">
+                                        <CheckCircle2 className="h-12 w-12 text-green-600" />
+                                    </div>
+                                    <h2 className="mb-2 text-2xl font-bold text-gray-900">Request Submitted!</h2>
+                                    <p className="mb-6 text-gray-600">
+                                        Your refund request for <strong>{selected.program}</strong> has been successfully submitted.
+                                    </p>
+
+                                    <div className="mb-6 rounded-lg border border-green-200 bg-white p-4 text-left shadow-sm">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <p className="text-sm text-gray-500">Booking ID</p>
+                                                <p className="font-mono font-medium text-gray-900">{selected.book_id}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-gray-500">Request Date</p>
+                                                <p className="font-medium text-gray-900">{formatDate(new Date().toISOString())}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-gray-500">Amount to Refund</p>
+                                                <p className="font-bold text-green-600">{formatCurrency(selected.total_paid)}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-gray-500">Status</p>
+                                                <Badge className="mt-1 border-yellow-200 bg-yellow-100 text-yellow-800">Pending Review</Badge>
                                             </div>
                                         </div>
+                                        {selected.receipt_count && selected.receipt_count > 1 && (
+                                            <p className="mt-3 text-xs text-gray-500 border-t border-green-100 pt-3">
+                                                This refund includes {selected.receipt_count} separate payments totaling {formatCurrency(selected.total_paid)}.
+                                            </p>
+                                        )}
+                                    </div>
 
-                                        <Alert className="mb-6 border-green-200 bg-green-50 text-left shadow-sm">
-                                            <CheckCircle2 className="h-4 w-4 text-green-600" />
-                                            <AlertDescription className="text-green-800">
-                                                We'll review your request and notify you via email within 2-3 business days. You can track the status
-                                                in your refund requests page.
-                                            </AlertDescription>
-                                        </Alert>
+                                    <Alert className="mb-6 border-green-200 bg-green-50 text-left shadow-sm">
+                                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                        <AlertDescription className="text-green-800">
+                                            We'll review your request and notify you via email within 2-3 business days. You can track the status in
+                                            your refund requests page.
+                                        </AlertDescription>
+                                    </Alert>
 
-                                        <div className="flex justify-center gap-3">
-                                            <Button variant="outline" className="border-green-200 hover:bg-green-50" onClick={() => router.visit('/parent/book-program/bookings')}>
-                                                View My Bookings
+                                    <div className="flex justify-center gap-3">
+                                        <Button
+                                            variant="outline"
+                                            className="border-green-200 hover:bg-green-50"
+                                            onClick={() => router.visit('/parent/book-program/bookings')}
+                                        >
+                                            View My Bookings
+                                        </Button>
+                                        <Link href="/parent/my-refund-requests">
+                                            <Button variant="outline" className="border-green-200 hover:bg-green-50">
+                                                View My Requests
                                             </Button>
-                                            <Link href="/parent/my-refund-requests">
-                                                <Button variant="outline" className="border-green-200 hover:bg-green-50">
-                                                    View My Requests
-                                                </Button>
-                                            </Link>
-                                            <Button
-                                                className="bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 shadow-md"
-                                                onClick={() => {
-                                                    setStep('select');
-                                                    setSelectedBooking('');
-                                                    setReason('');
-                                                    localStorage.removeItem('refundStep');
-                                                    localStorage.removeItem('selectedRefundBooking');
-                                                }}
-                                            >
-                                                Request Another Refund
-                                            </Button>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            )}
-                        </>
-                    )}
+                                        </Link>
+                                        <Button
+                                            className="bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-md hover:from-green-700 hover:to-emerald-700"
+                                            onClick={() => {
+                                                setStep('select');
+                                                setSelectedBooking('');
+                                                setReason('');
+                                                localStorage.removeItem('refundStep');
+                                                localStorage.removeItem('selectedRefundBooking');
+                                            }}
+                                        >
+                                            Request Another Refund
+                                        </Button>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
+                    </>
+                )}
             </div>
         </AppLayout>
     );

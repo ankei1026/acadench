@@ -114,7 +114,7 @@ class ParentBookProgramController extends Controller
                 ];
             });
 
-        $tutors = Tutor::with('user')
+        $tutors = Tutor::where('status', 'active')->with('user')
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function (Tutor $tutor) {

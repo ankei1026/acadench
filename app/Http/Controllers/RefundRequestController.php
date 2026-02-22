@@ -26,6 +26,9 @@ class RefundRequestController extends Controller
                 $totalPaid = $booking->receipts->sum('amount');
                 $remainingBalance = max(0, $booking->amount - $totalPaid);
 
+                // Get payment types for display
+                $paymentTypes = $booking->receipts->pluck('payment_type')->unique()->implode(', ');
+
                 return [
                     'book_id' => $booking->book_id,
                     'program' => $booking->program?->name,
@@ -43,6 +46,8 @@ class RefundRequestController extends Controller
                     'booking_status' => $booking->booking_status,
                     'total_paid' => $totalPaid,
                     'remaining_balance' => $remainingBalance,
+                    'payment_types' => $paymentTypes,
+                    'receipt_count' => $booking->receipts->count(),
                 ];
             });
 
@@ -66,7 +71,7 @@ class RefundRequestController extends Controller
         }
 
         // Check if booking exists and belongs to authenticated user
-        $booking = Booking::findOrFail($validated['book_id']);
+        $booking = Booking::with('receipts')->findOrFail($validated['book_id']);
 
         if ($booking->parent_id !== Auth::id()) {
             return redirect()->back()->with('error', 'Unauthorized');
@@ -91,16 +96,18 @@ class RefundRequestController extends Controller
             return redirect()->back()->with('error', 'A refund request for this booking is already pending.');
         }
 
-        // Calculate the downpayment (remaining balance if not fully paid, otherwise the amount)
+        // Calculate total amount paid from receipts
         $totalPaid = $booking->receipts->sum('amount');
-        $remainingBalance = max(0, $booking->amount - $totalPaid);
-        $refundAmount = $remainingBalance > 0 ? $remainingBalance : $booking->amount;
 
-        // Create the refund request
-        RefundRequest::create([
+        if ($totalPaid <= 0) {
+            return redirect()->back()->with('error', 'No payments found for this booking.');
+        }
+
+        // Create the refund request with the total paid amount
+        $refundRequest = RefundRequest::create([
             'book_id' => $booking->book_id,
             'reason' => $validated['reason'],
-            'amount' => $refundAmount,
+            'amount' => $totalPaid, // This is the actual amount paid from receipts
             'status' => 'pending',
         ]);
 
@@ -109,7 +116,7 @@ class RefundRequestController extends Controller
         foreach ($adminUsers as $admin) {
             $admin->notify(new InAppNotification(
                 title: 'Refund Request Submitted',
-                message: 'A refund request for ₱' . number_format($refundAmount) . ' has been submitted for ' . $booking->program?->name,
+                message: 'A refund request for ₱' . number_format($totalPaid, 2) . ' has been submitted for booking ' . $booking->book_id,
                 type: 'info'
             ));
         }

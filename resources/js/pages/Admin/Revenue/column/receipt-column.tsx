@@ -2,7 +2,7 @@
 
 import { ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
-import { Receipt } from "lucide-react";
+import { Receipt, User, GraduationCap, BookOpen } from "lucide-react";
 import { useState } from "react";
 import {
     Dialog,
@@ -25,7 +25,14 @@ export interface ReceiptData {
     receipt_image?: string | null;
     booking?: {
         book_id: string;
-    };
+        learner?: {
+            learner_id: string;
+            name: string;
+            nickname?: string | null;
+        } | null;
+    } | null;
+    parent_name?: string | null;
+    learner_name?: string | null;
     created_at: string;
 }
 
@@ -50,6 +57,33 @@ export const columns: ColumnDef<ReceiptData>[] = [
         ),
     },
     {
+        id: "parent",
+        header: "Parent",
+        cell: ({ row }) => {
+            const receipt = row.original;
+            const parentName = receipt.parent_name;
+
+            return (
+                <div className="flex items-center gap-2">
+                    <div className="rounded-full bg-amber-100 p-1.5">
+                        <User className="h-3.5 w-3.5 text-amber-700" />
+                    </div>
+                    <div className="flex flex-col">
+                        <span className="font-medium text-gray-900">
+                            {parentName || '—'}
+                        </span>
+                        {receipt.learner_name && (
+                            <span className="text-xs text-gray-500 flex items-center gap-1">
+                                <BookOpen className="h-3 w-3" />
+                                {receipt.learner_name}
+                            </span>
+                        )}
+                    </div>
+                </div>
+            );
+        },
+    },
+    {
         accessorKey: "paymentType",
         header: "Payment Type",
         cell: ({ row }) => {
@@ -63,7 +97,7 @@ export const columns: ColumnDef<ReceiptData>[] = [
     },
     {
         accessorKey: "book_id",
-        header: "Payment For",
+        header: "Booking ID",
         cell: ({ row }) => (
             <span className="font-mono text-xs">{row.getValue("book_id")}</span>
         ),
@@ -104,6 +138,8 @@ export const columns: ColumnDef<ReceiptData>[] = [
                                 <DialogTitle>Receipt Image</DialogTitle>
                                 <DialogDescription>
                                     Receipt for Booking: {row.original.book_id}
+                                    {row.original.parent_name && ` • Paid by: ${row.original.parent_name}`}
+                                    {row.original.learner_name && ` for ${row.original.learner_name}`}
                                 </DialogDescription>
                             </DialogHeader>
                             <div className="flex justify-center mt-4">

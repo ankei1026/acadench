@@ -17,7 +17,7 @@ class DatabaseSeeder extends Seeder
     {
         $admin = User::create([
             'name' => 'System Administrator',
-            'email' => 'admin@acadench.com',
+            'email' => 'adminsoraya@acadench.com',
             'role' => 'admin',
             'password' => Hash::make('12341234'),
             'email_verified_at' => now(),
@@ -86,6 +86,6 @@ class DatabaseSeeder extends Seeder
         // ]);
 
         // Call TutorApplication seeder
-        $this->call(TutorApplicationSeeder::class);
+        // $this->call(TutorApplicationSeeder::class);
     }
 }
