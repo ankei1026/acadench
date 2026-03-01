@@ -177,3 +177,17 @@ Route::middleware(['auth', 'role:tutor'])->prefix('tutor')->group(function () {
     Route::get('/profile', [TutorController::class, 'profile'])->name('tutor.profile');
     Route::put('/profile', [TutorController::class, 'updateProfile'])->name('tutor.profile.update');
 });
+
+// Add this temporarily in routes/web.php
+Route::get('/test-routes', function () {
+    return response()->json([
+        'routes' => collect(Route::getRoutes())->map(function ($route) {
+            return [
+                'uri' => $route->uri(),
+                'methods' => $route->methods(),
+                'name' => $route->getName(),
+                'action' => $route->getActionName()
+            ];
+        })
+    ]);
+});

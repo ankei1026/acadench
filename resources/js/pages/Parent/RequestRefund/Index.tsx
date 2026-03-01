@@ -27,7 +27,7 @@ import {
     Info,
     Receipt,
 } from 'lucide-react';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 
 interface Booking {
     book_id: string;
@@ -98,10 +98,7 @@ export default function Home({ bookings }: PageProps) {
         const bookDate = new Date(booking.book_date);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        return bookDate > today &&
-               booking.booking_status !== 'completed' &&
-               booking.booking_status !== 'cancelled' &&
-               booking.total_paid > 0; // Only show bookings with payments
+        return bookDate > today && booking.booking_status !== 'completed' && booking.booking_status !== 'cancelled' && booking.total_paid > 0; // Only show bookings with payments
     });
 
     const selected = selectedBooking ? eligibleBookings.find((b) => b.book_id === selectedBooking) : null;
@@ -146,11 +143,7 @@ export default function Home({ bookings }: PageProps) {
             {
                 onFinish: () => setLoading(false),
                 onSuccess: () => {
-                    toast({
-                        title: 'Refund Request Submitted',
-                        description: 'Your refund request has been submitted and is pending review.',
-                        variant: 'success',
-                    });
+                    toast.success('Refund request submitted successfully! Your request is pending review.');
                 },
                 onError: (errors: any) => {
                     console.error('Refund request error:', errors);
@@ -267,8 +260,8 @@ export default function Home({ bookings }: PageProps) {
                     <Info className="h-5 w-5 text-amber-600" />
                     <AlertTitle className="font-semibold text-amber-900">Refund Policy</AlertTitle>
                     <AlertDescription className="text-amber-800">
-                        You can request a refund for bookings that haven't started yet. The refund amount will be the total amount you've paid for this booking.
-                        Refund requests must be submitted before your session start date. Once approved, refunds are processed through{' '}
+                        You can request a refund for bookings that haven't started yet. The refund amount will be the total amount you've paid for
+                        this booking. Refund requests must be submitted before your session start date. Once approved, refunds are processed through{' '}
                         <strong>Soraya Learning Hub</strong> within 3-5 business days.
                     </AlertDescription>
                 </Alert>
@@ -281,8 +274,8 @@ export default function Home({ bookings }: PageProps) {
                             </div>
                             <h3 className="mt-4 text-xl font-semibold text-gray-900">No Eligible Bookings</h3>
                             <p className="mt-2 max-w-md text-center text-gray-600">
-                                You can only request refunds for bookings that haven't started yet and have payments made.
-                                Check back when you have upcoming sessions with payments.
+                                You can only request refunds for bookings that haven't started yet and have payments made. Check back when you have
+                                upcoming sessions with payments.
                             </p>
                             <Button
                                 variant="outline"
@@ -425,8 +418,9 @@ export default function Home({ bookings }: PageProps) {
                                                 {selected.remaining_balance > 0 && (
                                                     <div className="mt-2 rounded-lg bg-amber-50 p-3">
                                                         <p className="text-xs text-amber-800">
-                                                            <strong>Note:</strong> You have an outstanding balance of {formatCurrency(selected.remaining_balance)}.
-                                                            Only the paid amount of {formatCurrency(selected.total_paid)} will be refunded.
+                                                            <strong>Note:</strong> You have an outstanding balance of{' '}
+                                                            {formatCurrency(selected.remaining_balance)}. Only the paid amount of{' '}
+                                                            {formatCurrency(selected.total_paid)} will be refunded.
                                                         </p>
                                                     </div>
                                                 )}
@@ -479,7 +473,9 @@ export default function Home({ bookings }: PageProps) {
                                                     <div className="flex items-start gap-3">
                                                         <Shield className="mt-0.5 h-5 w-5 text-amber-600" />
                                                         <div>
-                                                            <h4 className="font-semibold text-amber-900">Refund Amount: {formatCurrency(selected.total_paid)}</h4>
+                                                            <h4 className="font-semibold text-amber-900">
+                                                                Refund Amount: {formatCurrency(selected.total_paid)}
+                                                            </h4>
                                                             <p className="mt-1 text-sm text-amber-800">
                                                                 This is the total amount you've paid for this booking. The refund will be processed
                                                                 through <strong>Soraya Learning Hub</strong> and typically takes 3-5 business days
@@ -565,8 +561,9 @@ export default function Home({ bookings }: PageProps) {
                                             </div>
                                         </div>
                                         {selected.receipt_count && selected.receipt_count > 1 && (
-                                            <p className="mt-3 text-xs text-gray-500 border-t border-green-100 pt-3">
-                                                This refund includes {selected.receipt_count} separate payments totaling {formatCurrency(selected.total_paid)}.
+                                            <p className="mt-3 border-t border-green-100 pt-3 text-xs text-gray-500">
+                                                This refund includes {selected.receipt_count} separate payments totaling{' '}
+                                                {formatCurrency(selected.total_paid)}.
                                             </p>
                                         )}
                                     </div>
