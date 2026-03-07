@@ -33,7 +33,7 @@ Route::get('/soraya-learning-hub', function () {
     return Inertia::render('SorayaLearningHub');
 });
 
-Route::get('/prices', function () {
+Route::get('/programs', function () {
     return Inertia::render('Prices');
 });
 

@@ -12,7 +12,7 @@ export default function HomeHeader() {
     const menuItems = [
         { label: 'Home', href: '/' },
         { label: 'Soraya Learning Hub', href: '/soraya-learning-hub' },
-        { label: 'Prices', href: '/prices' },
+        { label: 'Programs', href: '/programs' },
         { label: 'Tutor Application', href: '/tutor-application' },
         { label: 'Developers', href: '/developers' },
     ];

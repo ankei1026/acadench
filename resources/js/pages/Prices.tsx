@@ -117,14 +117,6 @@ export default function Prices() {
                 <p className="text-gray-600">{tier.description}</p>
             </div>
 
-            <div className="mb-6">
-                <div className="mb-2 flex items-baseline">
-                    <span className="text-4xl font-bold text-gray-900">{tier.price}</span>
-                    <span className="ml-2 text-gray-500">/ {tier.frequency}</span>
-                </div>
-                <p className="text-sm text-gray-500 italic">{tier.duration}</p>
-            </div>
-
             <div className="mb-8 space-y-4">
                 <div className="flex items-center text-sm text-gray-600">
                     <Clock className="mr-2 h-4 w-4 text-yellow-600" />
