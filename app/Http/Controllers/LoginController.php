@@ -28,12 +28,21 @@ class LoginController extends Controller
             ]);
         }
 
-        $role = Auth::user()->role;
+        $user = Auth::user();
+        $role = $user->role;
 
         switch ($role) {
             case 'admin':
                 return redirect()->intended('/admin/dashboard')->with(['success' => 'Log in successful']);
             case 'tutor':
+                // Check tutor status
+                $tutor = $user->tutor;
+                if ($tutor && $tutor->status !== 'active') {
+                    Auth::logout();
+                    return redirect()->route('home')->withErrors([
+                        'tutor' => "Your account is deactivate, you can't login as a Tutor"
+                    ]);
+                }
                 return redirect()->intended('/tutor/dashboard')->with(['success' => 'Log in successful']);
             case 'parent':
                 return redirect()->intended('/parent/home')->with(['success' => 'Log in successful']);
