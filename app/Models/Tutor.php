@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -220,5 +219,20 @@ class Tutor extends Model
     public function bookings(): HasMany
     {
         return $this->hasMany(Booking::class, 'tutor_id', 'tutor_id');
+    }
+    /**
+     * Get all ratings for the tutor.
+     */
+    public function ratings(): HasMany
+    {
+        return $this->hasMany(\App\Models\Rating::class, 'tutor_id', 'tutor_id');
+    }
+
+    /**
+     * Get the average rating for the tutor.
+     */
+    public function getAverageRatingAttribute(): ?float
+    {
+        return $this->ratings()->avg('rating');
     }
 }

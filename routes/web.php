@@ -53,6 +53,8 @@ Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
 
 // Parent routes
 Route::middleware(['auth', 'role:parent'])->prefix('parent')->group(function () {
+    // Ratings
+    Route::post('/ratings', [App\Http\Controllers\RatingController::class, 'store']);
     Route::get('/home', [ParentHomeController::class, 'index'])->name('parent.home');
 
     // Learners

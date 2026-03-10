@@ -79,11 +79,28 @@ class AdminTutorController extends Controller
 
     public function show($tutor_id)
     {
-        $tutor = Tutor::with('user')
+        $tutor = Tutor::with(['user', 'ratings.parent'])
             ->where('tutor_id', $tutor_id)
             ->firstOrFail();
 
+        // Calculate average rating
+        $average_rating = $tutor->ratings->avg('rating');
+
+        // Get feedbacks (with parent name, rating, feedback, created_at)
+        $feedbacks = $tutor->ratings
+            ->whereNotNull('feedback')
+            ->sortByDesc('created_at')
+            ->map(function($rating) {
+                return [
+                    'parent_name' => $rating->parent?->name ?? 'Parent',
+                    'rating' => $rating->rating,
+                    'feedback' => $rating->feedback,
+                    'created_at' => $rating->created_at?->format('Y-m-d H:i'),
+                ];
+            })->values();
+
         $tutorData = [
+                        'average_rating' => $average_rating ? round($average_rating, 2) : null,
             'id' => $tutor->id,
             'tutor_id' => $tutor->tutor_id,
             'subject' => $tutor->subject,
@@ -188,7 +205,8 @@ class AdminTutorController extends Controller
         ];
 
         return Inertia::render('Admin/Tutor/Show', [
-            'tutor' => $tutorData
+            'tutor' => $tutorData,
+            'feedbacks' => $feedbacks,
         ]);
     }
 

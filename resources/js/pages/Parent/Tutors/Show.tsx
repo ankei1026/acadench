@@ -2,16 +2,71 @@ import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
 import {
-    ArrowLeft, Mail, Phone, BookOpen, ExternalLink, Star, Briefcase,
-    Award, User, GraduationCap, Users, Calendar, MapPin,
-    Home, BrainCircuit, Globe, FileText, Link2, HeartHandshake,
-    School, Clock, Sparkles, Users2, BookMarked, Lightbulb,
-    Heart, Target, ThumbsUp, MessageSquare, Shield, PenTool,
-    Monitor, Wifi, Coffee, Smile, Zap, Gamepad2, AlertCircle,
-    DollarSign, CheckCircle, XCircle, Music, Palette, BookText,
-    Languages, Baby, Dog, Cat, Sun, Moon, Sunrise, Sunset,
-    Activity, Compass, Cpu, Smartphone, Tablet, Headphones,
-    Video, Camera, Mic, Volume2, VolumeX, Disc, Film
+    ArrowLeft,
+    Mail,
+    Phone,
+    BookOpen,
+    ExternalLink,
+    Star,
+    Briefcase,
+    Award,
+    User,
+    GraduationCap,
+    Users,
+    Calendar,
+    MapPin,
+    Home,
+    BrainCircuit,
+    Globe,
+    FileText,
+    Link2,
+    HeartHandshake,
+    School,
+    Clock,
+    Sparkles,
+    Users2,
+    BookMarked,
+    Lightbulb,
+    Heart,
+    Target,
+    ThumbsUp,
+    MessageSquare,
+    Shield,
+    PenTool,
+    Monitor,
+    Wifi,
+    Coffee,
+    Smile,
+    Zap,
+    Gamepad2,
+    AlertCircle,
+    DollarSign,
+    CheckCircle,
+    XCircle,
+    Music,
+    Palette,
+    BookText,
+    Languages,
+    Baby,
+    Dog,
+    Cat,
+    Sun,
+    Moon,
+    Sunrise,
+    Sunset,
+    Activity,
+    Compass,
+    Cpu,
+    Smartphone,
+    Tablet,
+    Headphones,
+    Video,
+    Camera,
+    Mic,
+    Volume2,
+    VolumeX,
+    Disc,
+    Film,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -43,6 +98,7 @@ interface TutorProfile {
     mother_name: string | null;
     father_name: string | null;
     living_status: string | null;
+    average_rating: number | null;
 
     // Educational Background
     high_school: string | null;
@@ -143,11 +199,53 @@ interface TutorProfile {
     };
 }
 
-interface TutorShowPageProps {
-    tutor: TutorProfile;
+interface Feedback {
+    parent_name: string;
+    rating: number;
+    feedback: string;
+    created_at: string;
 }
 
-export default function TutorShow({ tutor }: TutorShowPageProps) {
+interface TutorShowPageProps {
+    tutor: TutorProfile;
+    feedbacks?: Feedback[];
+}
+
+export default function TutorShow({ tutor, feedbacks = [] }: TutorShowPageProps) {
+    // Format date to readable string
+    const formatDate = (dateString: string) => {
+        if (!dateString) return '';
+        const date = new Date(dateString.replace(' ', 'T'));
+        if (isNaN(date.getTime())) return dateString;
+
+        const now = new Date();
+        const isToday = date.toDateString() === now.toDateString();
+        const yesterday = new Date(now);
+        yesterday.setDate(now.getDate() - 1);
+        const isYesterday = date.toDateString() === yesterday.toDateString();
+
+        const timeString = date.toLocaleString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true,
+        });
+
+        if (isToday) {
+            return `Today at ${timeString}`;
+        } else if (isYesterday) {
+            return `Yesterday at ${timeString}`;
+        } else {
+            return date.toLocaleString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true,
+            });
+        }
+    };
+
     const breadcrumbs: BreadcrumbItem[] = [
         {
             title: 'Tutors',
@@ -161,7 +259,7 @@ export default function TutorShow({ tutor }: TutorShowPageProps) {
 
     const formatEnum = (value: string | null | undefined) => {
         if (!value) return '—';
-        return value.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        return value.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
     };
 
     const formatBoolean = (value: boolean | null | undefined) => {
@@ -176,6 +274,19 @@ export default function TutorShow({ tutor }: TutorShowPageProps) {
     const RatingDots = ({ rating, label, color = 'amber' }: { rating: number; label?: string; color?: string }) => {
         const getColor = (index: number) => {
             if (index < rating) {
+        // Format date to readable string
+        const formatDate = (dateString: string) => {
+            if (!dateString) return '';
+            const date = new Date(dateString.replace(' ', 'T'));
+            return date.toLocaleString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true,
+            });
+        };
                 return color === 'amber' ? 'bg-gradient-to-r from-amber-400 to-orange-400' : 'bg-gradient-to-r from-blue-400 to-blue-500';
             }
             return 'bg-gray-200';
@@ -199,11 +310,11 @@ export default function TutorShow({ tutor }: TutorShowPageProps) {
 
     const InfoRow = ({ label, value, fullWidth = false, icon: Icon }: { label: string; value: React.ReactNode; fullWidth?: boolean; icon?: any }) => (
         <div className={fullWidth ? 'md:col-span-2' : ''}>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500 flex items-center gap-1">
+            <p className="mb-2 flex items-center gap-1 text-xs font-semibold tracking-wider text-gray-500 uppercase">
                 {Icon && <Icon className="h-3 w-3" />}
                 {label}
             </p>
-            <div className="rounded-lg bg-gradient-to-r from-amber-50 to-orange-50 px-3 py-2 font-medium text-gray-900 break-words">
+            <div className="rounded-lg bg-gradient-to-r from-amber-50 to-orange-50 px-3 py-2 font-medium break-words text-gray-900">
                 {value || '—'}
             </div>
         </div>
@@ -267,15 +378,15 @@ export default function TutorShow({ tutor }: TutorShowPageProps) {
                 </div>
 
                 {/* Two Column Layout */}
-                <div className="flex flex-col lg:flex-row gap-6">
+                <div className="flex flex-col gap-6 lg:flex-row">
                     {/* Left Sidebar - Sticky */}
-                    <div className="lg:w-80 flex-shrink-0">
+                    <div className="flex-shrink-0 lg:w-80">
                         <div className="sticky top-6">
-                            <Card className="border-amber-200 bg-white shadow-lg overflow-hidden">
+                            <Card className="overflow-hidden border-amber-200 bg-white shadow-lg">
                                 {/* Profile Header with Gradient */}
-                                <div className="px-6 text-center pt-6">
-                                    <div className="flex justify-center mb-4">
-                                        <div className="rounded-full border-4 border-white/50 shadow-xl overflow-hidden">
+                                <div className="px-6 pt-6 text-center">
+                                    <div className="mb-4 flex justify-center">
+                                        <div className="overflow-hidden rounded-full border-4 border-white/50 shadow-xl">
                                             <Avatar className="h-28 w-28">
                                                 <AvatarImage src={tutor.photo || undefined} alt={tutor.name} />
                                                 <AvatarFallback className="bg-gradient-to-r from-amber-600 to-orange-600 text-3xl text-black">
@@ -285,34 +396,36 @@ export default function TutorShow({ tutor }: TutorShowPageProps) {
                                         </div>
                                     </div>
                                     <h3 className="text-xl font-bold text-black">{tutor.name}</h3>
-                                    {tutor.subject && (
-                                        <Badge className="mt-2 border-amber-200 bg-amber-100 text-amber-700">
-                                            {tutor.subject}
-                                        </Badge>
+                                    {tutor.subject && <Badge className="mt-2 border-amber-200 bg-amber-100 text-amber-700">{tutor.subject}</Badge>}
+                                    {/* Average Rating */}
+                                    {typeof tutor.average_rating === 'number' && (
+                                        <div className="mt-2 flex items-center justify-center gap-1 text-amber-600">
+                                            <Star className="mr-1 h-5 w-5 fill-amber-400 text-amber-500" />
+                                            <span className="text-lg font-bold">{tutor.average_rating.toFixed(2)}</span>
+                                            <span className="text-sm text-gray-500">/ 5</span>
+                                        </div>
                                     )}
                                     {tutor.rate_per_hour && (
-                                        <div className="mt-2 text-lg font-bold text-amber-600">
-                                            ₱{Number(tutor.rate_per_hour).toFixed(2)}/hour
-                                        </div>
+                                        <div className="mt-2 text-lg font-bold text-amber-600">₱{Number(tutor.rate_per_hour).toFixed(2)}/hour</div>
                                     )}
                                 </div>
 
                                 {/* Contact Info */}
-                                <CardContent className="px-5 space-y-4 mt-4">
+                                <CardContent className="mt-4 space-y-4 px-5">
                                     <div className="flex items-start gap-3 rounded-lg bg-amber-50 p-3">
-                                        <User className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                                        <User className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600" />
                                         <div className="min-w-0 flex-1">
-                                            <p className="text-xs font-semibold uppercase text-gray-500">Tutor ID</p>
-                                            <p className="font-mono font-bold text-amber-700 break-all">{tutor.tutor_id}</p>
+                                            <p className="text-xs font-semibold text-gray-500 uppercase">Tutor ID</p>
+                                            <p className="font-mono font-bold break-all text-amber-700">{tutor.tutor_id}</p>
                                         </div>
                                     </div>
 
                                     {tutor.email && (
                                         <div className="flex items-start gap-3 rounded-lg bg-blue-50 p-3">
-                                            <Mail className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                                            <Mail className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600" />
                                             <div className="min-w-0 flex-1">
-                                                <p className="text-xs font-semibold uppercase text-gray-500">Email</p>
-                                                <a href={`mailto:${tutor.email}`} className="font-medium text-blue-700 hover:underline break-all">
+                                                <p className="text-xs font-semibold text-gray-500 uppercase">Email</p>
+                                                <a href={`mailto:${tutor.email}`} className="font-medium break-all text-blue-700 hover:underline">
                                                     {tutor.email}
                                                 </a>
                                             </div>
@@ -321,10 +434,10 @@ export default function TutorShow({ tutor }: TutorShowPageProps) {
 
                                     {tutor.number && (
                                         <div className="flex items-start gap-3 rounded-lg bg-green-50 p-3">
-                                            <Phone className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                                            <Phone className="mt-0.5 h-5 w-5 flex-shrink-0 text-green-600" />
                                             <div className="min-w-0 flex-1">
-                                                <p className="text-xs font-semibold uppercase text-gray-500">Number</p>
-                                                <a href={`tel:${tutor.number}`} className="font-medium text-green-700 hover:underline break-all">
+                                                <p className="text-xs font-semibold text-gray-500 uppercase">Number</p>
+                                                <a href={`tel:${tutor.number}`} className="font-medium break-all text-green-700 hover:underline">
                                                     {tutor.number}
                                                 </a>
                                             </div>
@@ -333,14 +446,14 @@ export default function TutorShow({ tutor }: TutorShowPageProps) {
 
                                     {tutor.portfolio_link && (
                                         <div className="flex items-start gap-3 rounded-lg bg-purple-50 p-3">
-                                            <Globe className="h-5 w-5 text-purple-600 flex-shrink-0 mt-0.5" />
+                                            <Globe className="mt-0.5 h-5 w-5 flex-shrink-0 text-purple-600" />
                                             <div className="min-w-0 flex-1">
-                                                <p className="text-xs font-semibold uppercase text-gray-500">Portfolio</p>
+                                                <p className="text-xs font-semibold text-gray-500 uppercase">Portfolio</p>
                                                 <a
                                                     href={tutor.portfolio_link}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className="font-medium text-purple-700 hover:underline break-all text-sm"
+                                                    className="text-sm font-medium break-all text-purple-700 hover:underline"
                                                 >
                                                     {tutor.portfolio_link}
                                                 </a>
@@ -350,14 +463,14 @@ export default function TutorShow({ tutor }: TutorShowPageProps) {
 
                                     {tutor.facebook_link && (
                                         <div className="flex items-start gap-3 rounded-lg bg-indigo-50 p-3">
-                                            <Link2 className="h-5 w-5 text-indigo-600 flex-shrink-0 mt-0.5" />
+                                            <Link2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-indigo-600" />
                                             <div className="min-w-0 flex-1">
-                                                <p className="text-xs font-semibold uppercase text-gray-500">Facebook</p>
+                                                <p className="text-xs font-semibold text-gray-500 uppercase">Facebook</p>
                                                 <a
                                                     href={tutor.facebook_link}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className="font-medium text-indigo-700 hover:underline break-all text-sm"
+                                                    className="text-sm font-medium break-all text-indigo-700 hover:underline"
                                                 >
                                                     {tutor.facebook_link}
                                                 </a>
@@ -367,6 +480,46 @@ export default function TutorShow({ tutor }: TutorShowPageProps) {
                                 </CardContent>
                             </Card>
                         </div>
+
+                        {/* Parent Feedbacks */}
+                        <Card className="mt-7 border-amber-200 shadow-md">
+                            <CardHeader className="border-b border-amber-100 bg-gradient-to-r from-amber-50 to-orange-50 py-4">
+                                <SectionHeader title="Parent Feedbacks" icon={Star} />
+                            </CardHeader>
+                            <CardContent className="pt-5">
+                                {feedbacks.length === 0 ? (
+                                    <div className="text-sm text-gray-500">No feedbacks yet.</div>
+                                ) : (
+                                    <div className="space-y-6">
+                                        {feedbacks.map((fb, idx) => (
+                                            <div key={idx} className="rounded-lg border border-amber-100 bg-amber-50 p-4">
+                                                <div className="mb-1 flex items-center gap-2">
+                                                    <span className="font-semibold text-gray-900">{fb.parent_name}</span>
+                                                    <span className="text-xs text-gray-400">{fb.created_at}</span>
+                                                </div>
+                                                <div className="mb-2 flex items-center gap-1">
+                                                    {[1, 2, 3, 4, 5].map((star) => (
+                                                        <span key={star}>
+                                                            <svg
+                                                                width="16"
+                                                                height="16"
+                                                                fill={fb.rating >= star ? '#f59e42' : 'none'}
+                                                                stroke="#f59e42"
+                                                                strokeWidth="1.5"
+                                                                viewBox="0 0 24 24"
+                                                            >
+                                                                <polygon points="12 17.27 18.18 21 16.54 13.97 22 9.24 14.81 8.63 12 2 9.19 8.63 2 9.24 7.46 13.97 5.82 21 12 17.27" />
+                                                            </svg>
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                                <div className="whitespace-pre-line text-gray-700">{fb.feedback}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
                     </div>
 
                     {/* Right Content - Scrollable */}
@@ -391,13 +544,17 @@ export default function TutorShow({ tutor }: TutorShowPageProps) {
                                         <SectionHeader title="Personal Information" icon={User} />
                                     </CardHeader>
                                     <CardContent className="pt-5">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                             {tutor.full_name && <InfoRow label="Full Name" value={tutor.full_name} icon={User} />}
                                             {tutor.age && <InfoRow label="Age" value={tutor.age} icon={Calendar} />}
                                             {tutor.birthdate && <InfoRow label="Birthdate" value={tutor.birthdate} icon={Calendar} />}
                                             {tutor.gender && <InfoRow label="Gender" value={formatEnum(tutor.gender)} icon={Users} />}
-                                            {tutor.living_status && <InfoRow label="Living Status" value={formatEnum(tutor.living_status)} icon={Home} />}
-                                            {tutor.home_address && <InfoRow label="Home Address" value={tutor.home_address} icon={MapPin} fullWidth />}
+                                            {tutor.living_status && (
+                                                <InfoRow label="Living Status" value={formatEnum(tutor.living_status)} icon={Home} />
+                                            )}
+                                            {tutor.home_address && (
+                                                <InfoRow label="Home Address" value={tutor.home_address} icon={MapPin} fullWidth />
+                                            )}
                                         </div>
                                     </CardContent>
                                 </Card>
@@ -410,7 +567,7 @@ export default function TutorShow({ tutor }: TutorShowPageProps) {
                                         <SectionHeader title="Family Information" icon={Heart} />
                                     </CardHeader>
                                     <CardContent className="pt-5">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                             {tutor.mother_name && <InfoRow label="Mother's Name" value={tutor.mother_name} icon={Heart} />}
                                             {tutor.father_name && <InfoRow label="Father's Name" value={tutor.father_name} icon={Heart} />}
                                         </div>
@@ -437,9 +594,11 @@ export default function TutorShow({ tutor }: TutorShowPageProps) {
                                         <SectionHeader title="Educational Background" icon={GraduationCap} />
                                     </CardHeader>
                                     <CardContent className="pt-5">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                             {tutor.high_school && <InfoRow label="High School" value={tutor.high_school} icon={School} />}
-                                            {tutor.college_school && <InfoRow label="College/University" value={tutor.college_school} icon={GraduationCap} />}
+                                            {tutor.college_school && (
+                                                <InfoRow label="College/University" value={tutor.college_school} icon={GraduationCap} />
+                                            )}
                                             {tutor.college_course && <InfoRow label="College Course" value={tutor.college_course} icon={BookText} />}
                                             {tutor.license_date && <InfoRow label="License Date" value={tutor.license_date} icon={Award} />}
                                         </div>
@@ -454,15 +613,22 @@ export default function TutorShow({ tutor }: TutorShowPageProps) {
                             )}
 
                             {/* Teaching Experience */}
-                            {(tutor.tutoring_experience_duration || tutor.employment_status || tutor.tutoring_experience_levels?.length > 0 || tutor.has_school_teaching_experience) && (
+                            {(tutor.tutoring_experience_duration ||
+                                tutor.employment_status ||
+                                tutor.tutoring_experience_levels?.length > 0 ||
+                                tutor.has_school_teaching_experience) && (
                                 <Card className="border-amber-200 shadow-md">
                                     <CardHeader className="border-b border-amber-100 bg-gradient-to-r from-amber-50 to-orange-50 py-4">
                                         <SectionHeader title="Teaching Experience" icon={Briefcase} />
                                     </CardHeader>
                                     <CardContent className="pt-5">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                             {tutor.tutoring_experience_duration && (
-                                                <InfoRow label="Tutoring Experience" value={formatEnum(tutor.tutoring_experience_duration)} icon={Clock} />
+                                                <InfoRow
+                                                    label="Tutoring Experience"
+                                                    value={formatEnum(tutor.tutoring_experience_duration)}
+                                                    icon={Clock}
+                                                />
                                             )}
                                             {tutor.employment_status && (
                                                 <InfoRow label="Employment Status" value={formatEnum(tutor.employment_status)} icon={Briefcase} />
@@ -470,11 +636,13 @@ export default function TutorShow({ tutor }: TutorShowPageProps) {
                                             {tutor.current_employer && (
                                                 <InfoRow label="Current Employer" value={tutor.current_employer} icon={Users} />
                                             )}
-                                            {tutor.working_hours && (
-                                                <InfoRow label="Working Hours" value={tutor.working_hours} icon={Clock} />
-                                            )}
+                                            {tutor.working_hours && <InfoRow label="Working Hours" value={tutor.working_hours} icon={Clock} />}
                                             {tutor.school_teaching_experience_duration && (
-                                                <InfoRow label="School Teaching Experience" value={tutor.school_teaching_experience_duration} icon={School} />
+                                                <InfoRow
+                                                    label="School Teaching Experience"
+                                                    value={tutor.school_teaching_experience_duration}
+                                                    icon={School}
+                                                />
                                             )}
                                             {tutor.previous_clients && (
                                                 <InfoRow label="Previous Clients" value={tutor.previous_clients} icon={Users2} fullWidth />
@@ -483,7 +651,7 @@ export default function TutorShow({ tutor }: TutorShowPageProps) {
 
                                         {tutor.tutoring_experience_levels && tutor.tutoring_experience_levels.length > 0 && (
                                             <div className="mt-4">
-                                                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">Experience Levels</p>
+                                                <p className="mb-2 text-xs font-semibold tracking-wider text-gray-500 uppercase">Experience Levels</p>
                                                 <TagList items={tutor.tutoring_experience_levels} color="blue" />
                                             </div>
                                         )}
@@ -499,15 +667,19 @@ export default function TutorShow({ tutor }: TutorShowPageProps) {
                             )}
 
                             {/* Teaching Preferences & Skills */}
-                            {(tutor.favorite_subject_to_teach || tutor.easiest_subject_to_teach || tutor.most_difficult_subject_to_teach ||
-                              tutor.easier_school_level_to_teach || tutor.harder_school_level_to_teach || tutor.work_preference ||
-                              tutor.class_size_preference) && (
+                            {(tutor.favorite_subject_to_teach ||
+                                tutor.easiest_subject_to_teach ||
+                                tutor.most_difficult_subject_to_teach ||
+                                tutor.easier_school_level_to_teach ||
+                                tutor.harder_school_level_to_teach ||
+                                tutor.work_preference ||
+                                tutor.class_size_preference) && (
                                 <Card className="border-amber-200 shadow-md">
                                     <CardHeader className="border-b border-amber-100 bg-gradient-to-r from-amber-50 to-orange-50 py-4">
                                         <SectionHeader title="Teaching Preferences" icon={Target} />
                                     </CardHeader>
                                     <CardContent className="pt-5">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                             {tutor.favorite_subject_to_teach && (
                                                 <InfoRow label="Favorite Subject to Teach" value={tutor.favorite_subject_to_teach} icon={Star} />
                                             )}
@@ -518,19 +690,35 @@ export default function TutorShow({ tutor }: TutorShowPageProps) {
                                                 <InfoRow label="Most Difficult Subject" value={tutor.most_difficult_subject_to_teach} icon={Zap} />
                                             )}
                                             {tutor.easier_school_level_to_teach && (
-                                                <InfoRow label="Easier School Level" value={formatEnum(tutor.easier_school_level_to_teach)} icon={Baby} />
+                                                <InfoRow
+                                                    label="Easier School Level"
+                                                    value={formatEnum(tutor.easier_school_level_to_teach)}
+                                                    icon={Baby}
+                                                />
                                             )}
                                             {tutor.harder_school_level_to_teach && (
-                                                <InfoRow label="Harder School Level" value={formatEnum(tutor.harder_school_level_to_teach)} icon={Users} />
+                                                <InfoRow
+                                                    label="Harder School Level"
+                                                    value={formatEnum(tutor.harder_school_level_to_teach)}
+                                                    icon={Users}
+                                                />
                                             )}
                                             {tutor.work_preference && (
                                                 <InfoRow label="Work Preference" value={formatEnum(tutor.work_preference)} icon={Briefcase} />
                                             )}
                                             {tutor.class_size_preference && (
-                                                <InfoRow label="Class Size Preference" value={formatEnum(tutor.class_size_preference)} icon={Users2} />
+                                                <InfoRow
+                                                    label="Class Size Preference"
+                                                    value={formatEnum(tutor.class_size_preference)}
+                                                    icon={Users2}
+                                                />
                                             )}
                                             {tutor.preferred_teaching_language && (
-                                                <InfoRow label="Preferred Teaching Language" value={tutor.preferred_teaching_language} icon={Languages} />
+                                                <InfoRow
+                                                    label="Preferred Teaching Language"
+                                                    value={tutor.preferred_teaching_language}
+                                                    icon={Languages}
+                                                />
                                             )}
                                         </div>
                                     </CardContent>
@@ -538,33 +726,41 @@ export default function TutorShow({ tutor }: TutorShowPageProps) {
                             )}
 
                             {/* Teaching Philosophy */}
-                            {(tutor.reasons_love_teaching?.length > 0 || tutor.teaching_values?.length > 0 || tutor.application_reasons?.length > 0) && (
+                            {(tutor.reasons_love_teaching?.length > 0 ||
+                                tutor.teaching_values?.length > 0 ||
+                                tutor.application_reasons?.length > 0) && (
                                 <Card className="border-amber-200 shadow-md">
                                     <CardHeader className="border-b border-amber-100 bg-gradient-to-r from-amber-50 to-orange-50 py-4">
                                         <SectionHeader title="Teaching Philosophy" icon={Lightbulb} />
                                     </CardHeader>
-                                    <CardContent className="pt-5 space-y-6">
+                                    <CardContent className="space-y-6 pt-5">
                                         {tutor.reasons_love_teaching && tutor.reasons_love_teaching.length > 0 && (
                                             <div>
-                                                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">Reasons for Loving Teaching</p>
+                                                <p className="mb-2 text-xs font-semibold tracking-wider text-gray-500 uppercase">
+                                                    Reasons for Loving Teaching
+                                                </p>
                                                 <TagList items={tutor.reasons_love_teaching} icon={Heart} color="pink" />
                                             </div>
                                         )}
                                         {tutor.teaching_values && tutor.teaching_values.length > 0 && (
                                             <div>
-                                                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">Teaching Values</p>
+                                                <p className="mb-2 text-xs font-semibold tracking-wider text-gray-500 uppercase">Teaching Values</p>
                                                 <TagList items={tutor.teaching_values} icon={Shield} color="purple" />
                                             </div>
                                         )}
                                         {tutor.application_reasons && tutor.application_reasons.length > 0 && (
                                             <div>
-                                                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">Reasons for Applying</p>
+                                                <p className="mb-2 text-xs font-semibold tracking-wider text-gray-500 uppercase">
+                                                    Reasons for Applying
+                                                </p>
                                                 <TagList items={tutor.application_reasons} icon={Target} color="blue" />
                                             </div>
                                         )}
                                         {tutor.outside_activities && tutor.outside_activities.length > 0 && (
                                             <div>
-                                                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">Outside Activities</p>
+                                                <p className="mb-2 text-xs font-semibold tracking-wider text-gray-500 uppercase">
+                                                    Outside Activities
+                                                </p>
                                                 <TagList items={tutor.outside_activities} icon={Activity} color="green" />
                                             </div>
                                         )}
@@ -573,29 +769,29 @@ export default function TutorShow({ tutor }: TutorShowPageProps) {
                             )}
 
                             {/* Ratings */}
-                            {(tutor.enjoy_playing_with_kids_rating > 0 || tutor.public_speaking_rating > 0 || tutor.creativity_rating > 0 ||
-                              tutor.english_proficiency_rating > 0 || tutor.penmanship_rating > 0 || tutor.need_job_rating > 0) && (
+                            {(tutor.enjoy_playing_with_kids_rating > 0 ||
+                                tutor.public_speaking_rating > 0 ||
+                                tutor.creativity_rating > 0 ||
+                                tutor.english_proficiency_rating > 0 ||
+                                tutor.penmanship_rating > 0 ||
+                                tutor.need_job_rating > 0) && (
                                 <Card className="border-amber-200 shadow-md">
                                     <CardHeader className="border-b border-amber-100 bg-gradient-to-r from-amber-50 to-orange-50 py-4">
                                         <SectionHeader title="Skills & Ratings" icon={Star} />
                                     </CardHeader>
                                     <CardContent className="pt-5">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                                             {tutor.enjoy_playing_with_kids_rating > 0 && (
                                                 <RatingDots rating={tutor.enjoy_playing_with_kids_rating} label="Enjoys Playing with Kids" />
                                             )}
                                             {tutor.public_speaking_rating > 0 && (
                                                 <RatingDots rating={tutor.public_speaking_rating} label="Public Speaking" />
                                             )}
-                                            {tutor.creativity_rating > 0 && (
-                                                <RatingDots rating={tutor.creativity_rating} label="Creativity" />
-                                            )}
+                                            {tutor.creativity_rating > 0 && <RatingDots rating={tutor.creativity_rating} label="Creativity" />}
                                             {tutor.english_proficiency_rating > 0 && (
                                                 <RatingDots rating={tutor.english_proficiency_rating} label="English Proficiency" />
                                             )}
-                                            {tutor.penmanship_rating > 0 && (
-                                                <RatingDots rating={tutor.penmanship_rating} label="Penmanship" />
-                                            )}
+                                            {tutor.penmanship_rating > 0 && <RatingDots rating={tutor.penmanship_rating} label="Penmanship" />}
                                             {tutor.need_job_rating > 0 && (
                                                 <RatingDots rating={tutor.need_job_rating} label="Need for Job" color="blue" />
                                             )}
@@ -619,16 +815,18 @@ export default function TutorShow({ tutor }: TutorShowPageProps) {
                                     <CardHeader className="border-b border-amber-100 bg-gradient-to-r from-amber-50 to-orange-50 py-4">
                                         <SectionHeader title="Preferences & Interests" icon={HeartHandshake} />
                                     </CardHeader>
-                                    <CardContent className="pt-5 space-y-6">
+                                    <CardContent className="space-y-6 pt-5">
                                         {tutor.preferred_toys_games && tutor.preferred_toys_games.length > 0 && (
                                             <div>
-                                                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">Preferred Toys & Games</p>
+                                                <p className="mb-2 text-xs font-semibold tracking-wider text-gray-500 uppercase">
+                                                    Preferred Toys & Games
+                                                </p>
                                                 <TagList items={tutor.preferred_toys_games} icon={Gamepad2} color="green" />
                                             </div>
                                         )}
                                         {tutor.annoyances && tutor.annoyances.length > 0 && (
                                             <div>
-                                                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">Annoyances</p>
+                                                <p className="mb-2 text-xs font-semibold tracking-wider text-gray-500 uppercase">Annoyances</p>
                                                 <TagList items={tutor.annoyances} icon={AlertCircle} color="red" />
                                             </div>
                                         )}
@@ -637,19 +835,26 @@ export default function TutorShow({ tutor }: TutorShowPageProps) {
                             )}
 
                             {/* Technology & Teaching Methods */}
-                            {(tutor.edtech_opinion || tutor.needs_phone_while_teaching || tutor.teaching_difficulty_approach ||
-                              tutor.discipline_approach || tutor.approves_late_fine_reward) && (
+                            {(tutor.edtech_opinion ||
+                                tutor.needs_phone_while_teaching ||
+                                tutor.teaching_difficulty_approach ||
+                                tutor.discipline_approach ||
+                                tutor.approves_late_fine_reward) && (
                                 <Card className="border-amber-200 shadow-md">
                                     <CardHeader className="border-b border-amber-100 bg-gradient-to-r from-amber-50 to-orange-50 py-4">
                                         <SectionHeader title="Teaching Methods & Technology" icon={Monitor} />
                                     </CardHeader>
                                     <CardContent className="pt-5">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                             {tutor.edtech_opinion && (
                                                 <InfoRow label="EdTech Opinion" value={tutor.edtech_opinion} icon={Cpu} fullWidth />
                                             )}
                                             {tutor.teaching_difficulty_approach && (
-                                                <InfoRow label="Teaching Difficulty Approach" value={formatEnum(tutor.teaching_difficulty_approach)} icon={Compass} />
+                                                <InfoRow
+                                                    label="Teaching Difficulty Approach"
+                                                    value={formatEnum(tutor.teaching_difficulty_approach)}
+                                                    icon={Compass}
+                                                />
                                             )}
                                             {tutor.discipline_approach && (
                                                 <InfoRow label="Discipline Approach" value={formatEnum(tutor.discipline_approach)} icon={Shield} />
@@ -665,7 +870,7 @@ export default function TutorShow({ tutor }: TutorShowPageProps) {
                                             )}
                                         </div>
 
-                                        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
                                             {tutor.needs_phone_while_teaching !== undefined && (
                                                 <div className="flex items-center gap-2 rounded-lg bg-blue-50 p-3">
                                                     {tutor.needs_phone_while_teaching ? (
@@ -747,19 +952,27 @@ export default function TutorShow({ tutor }: TutorShowPageProps) {
                             )}
 
                             {/* Availability & Logistics */}
-                            {(tutor.preferred_workdays?.length > 0 || tutor.preferred_schedule || tutor.preferred_workdays_frequency ||
-                              tutor.expected_tenure || tutor.distance_from_hub_minutes || tutor.transportation_mode) && (
+                            {(tutor.preferred_workdays?.length > 0 ||
+                                tutor.preferred_schedule ||
+                                tutor.preferred_workdays_frequency ||
+                                tutor.expected_tenure ||
+                                tutor.distance_from_hub_minutes ||
+                                tutor.transportation_mode) && (
                                 <Card className="border-amber-200 shadow-md">
                                     <CardHeader className="border-b border-amber-100 bg-gradient-to-r from-amber-50 to-orange-50 py-4">
                                         <SectionHeader title="Availability & Logistics" icon={Calendar} />
                                     </CardHeader>
                                     <CardContent className="pt-5">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                             {tutor.preferred_schedule && (
                                                 <InfoRow label="Preferred Schedule" value={formatEnum(tutor.preferred_schedule)} icon={Clock} />
                                             )}
                                             {tutor.preferred_workdays_frequency && (
-                                                <InfoRow label="Work Frequency" value={formatEnum(tutor.preferred_workdays_frequency)} icon={Calendar} />
+                                                <InfoRow
+                                                    label="Work Frequency"
+                                                    value={formatEnum(tutor.preferred_workdays_frequency)}
+                                                    icon={Calendar}
+                                                />
                                             )}
                                             {tutor.expected_tenure && (
                                                 <InfoRow label="Expected Tenure" value={formatEnum(tutor.expected_tenure)} icon={Clock} />
@@ -768,16 +981,26 @@ export default function TutorShow({ tutor }: TutorShowPageProps) {
                                                 <InfoRow label="Transportation Mode" value={formatEnum(tutor.transportation_mode)} icon={MapPin} />
                                             )}
                                             {tutor.distance_from_hub_minutes && (
-                                                <InfoRow label="Distance from Hub" value={`${tutor.distance_from_hub_minutes} minutes`} icon={MapPin} />
+                                                <InfoRow
+                                                    label="Distance from Hub"
+                                                    value={`${tutor.distance_from_hub_minutes} minutes`}
+                                                    icon={MapPin}
+                                                />
                                             )}
                                             {tutor.distance_from_work_minutes && (
-                                                <InfoRow label="Distance from Work" value={`${tutor.distance_from_work_minutes} minutes`} icon={MapPin} />
+                                                <InfoRow
+                                                    label="Distance from Work"
+                                                    value={`${tutor.distance_from_work_minutes} minutes`}
+                                                    icon={MapPin}
+                                                />
                                             )}
                                         </div>
 
                                         {tutor.preferred_workdays && tutor.preferred_workdays.length > 0 && (
                                             <div className="mt-4">
-                                                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">Preferred Work Days</p>
+                                                <p className="mb-2 text-xs font-semibold tracking-wider text-gray-500 uppercase">
+                                                    Preferred Work Days
+                                                </p>
                                                 <TagList items={tutor.preferred_workdays} icon={Sun} color="amber" />
                                             </div>
                                         )}

@@ -5,9 +5,23 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
-    ArrowLeft, BookOpen, Mail, Phone, Globe, FileText, User, Link2,
-    GraduationCap, Briefcase, Heart, MapPin, Star, BrainCircuit,
-    Calendar, Users, Home
+    ArrowLeft,
+    BookOpen,
+    Mail,
+    Phone,
+    Globe,
+    FileText,
+    User,
+    Link2,
+    GraduationCap,
+    Briefcase,
+    Heart,
+    MapPin,
+    Star,
+    BrainCircuit,
+    Calendar,
+    Users,
+    Home,
 } from 'lucide-react';
 
 interface Tutor {
@@ -114,11 +128,52 @@ interface Tutor {
     } | null;
 }
 
-interface Props {
-    tutor: Tutor;
+interface Feedback {
+    parent_name: string;
+    rating: number;
+    feedback: string;
+    created_at: string;
 }
 
-export default function TutorShow({ tutor }: Props) {
+interface Props {
+    tutor: Tutor & { average_rating?: number };
+    feedbacks?: Feedback[];
+}
+
+export default function TutorShow({ tutor, feedbacks = [] }: Props) {
+    // Format date to readable string (matches parent view)
+    const formatDate = (dateString: string) => {
+        if (!dateString) return '';
+        const date = new Date(dateString.replace(' ', 'T'));
+        if (isNaN(date.getTime())) return dateString;
+
+        const now = new Date();
+        const isToday = date.toDateString() === now.toDateString();
+        const yesterday = new Date(now);
+        yesterday.setDate(now.getDate() - 1);
+        const isYesterday = date.toDateString() === yesterday.toDateString();
+
+        const timeString = date.toLocaleString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true,
+        });
+
+        if (isToday) {
+            return `Today at ${timeString}`;
+        } else if (isYesterday) {
+            return `Yesterday at ${timeString}`;
+        } else {
+            return date.toLocaleString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true,
+            });
+        }
+    };
     const breadcrumbs = [
         { title: 'Tutors', href: '/admin/tutors' },
         { title: tutor.user?.name || 'Tutor Details', href: '#' },
@@ -151,8 +206,10 @@ export default function TutorShow({ tutor }: Props) {
 
     const InfoRow = ({ label, value, fullWidth = false }: { label: string; value: React.ReactNode; fullWidth?: boolean }) => (
         <div className={fullWidth ? 'md:col-span-2' : ''}>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">{label}</p>
-            <div className="rounded-lg bg-gradient-to-r from-amber-50 to-orange-50 px-3 py-2 font-medium text-gray-900 break-words">{value || '—'}</div>
+            <p className="mb-2 text-xs font-semibold tracking-wider text-gray-500 uppercase">{label}</p>
+            <div className="rounded-lg bg-gradient-to-r from-amber-50 to-orange-50 px-3 py-2 font-medium break-words text-gray-900">
+                {value || '—'}
+            </div>
         </div>
     );
 
@@ -181,15 +238,15 @@ export default function TutorShow({ tutor }: Props) {
                 </div>
 
                 {/* Two Column Layout */}
-                <div className="flex flex-col lg:flex-row gap-6">
+                <div className="flex flex-col gap-6 lg:flex-row">
                     {/* Left Sidebar - Sticky */}
-                    <div className="lg:w-80 flex-shrink-0">
+                    <div className="flex-shrink-0 lg:w-80">
                         <div className="sticky top-6">
-                            <Card className="border-amber-200 bg-white shadow-lg overflow-hidden">
+                            <Card className="overflow-hidden border-amber-200 bg-white shadow-lg">
                                 {/* Profile Header with Gradient */}
                                 <div className="px-6 text-center">
-                                    <div className="flex justify-center mb-4">
-                                        <div className="rounded-full border-4 border-white/50 shadow-xl overflow-hidden">
+                                    <div className="mb-4 flex justify-center">
+                                        <div className="overflow-hidden rounded-full border-4 border-white/50 shadow-xl">
                                             <Avatar className="h-28 w-28">
                                                 <AvatarImage src={tutor.photo || undefined} alt={tutor.user?.name} />
                                                 <AvatarFallback className="bg-gradient-to-r from-amber-600 to-orange-600 text-3xl text-black">
@@ -199,50 +256,98 @@ export default function TutorShow({ tutor }: Props) {
                                         </div>
                                     </div>
                                     <h3 className="text-xl font-bold text-black">{tutor.user?.name}</h3>
+                                    {/* Average Rating */}
+                                    {typeof tutor.average_rating === 'number' && (
+                                        <div className="mt-2 flex items-center justify-center gap-1 text-amber-600">
+                                            <Star className="mr-1 h-5 w-5 fill-amber-400 text-amber-500" />
+                                            <span className="text-lg font-bold">{tutor.average_rating.toFixed(2)}</span>
+                                            <span className="text-sm text-gray-500">/ 5</span>
+                                        </div>
+                                    )}
                                 </div>
+                                {/* Parent Feedbacks */}
 
                                 {/* Contact Info */}
-                                <CardContent className="px-5 space-y-4">
+                                <CardContent className="space-y-4 px-5">
                                     <div className="flex items-start gap-3 rounded-lg bg-amber-50 p-3">
-                                        <User className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                                        <User className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600" />
                                         <div className="min-w-0 flex-1">
-                                            <p className="text-xs font-semibold uppercase text-gray-500">Tutor ID</p>
-                                            <p className="font-mono font-bold text-amber-700 break-all">{tutor.tutor_id}</p>
+                                            <p className="text-xs font-semibold text-gray-500 uppercase">Tutor ID</p>
+                                            <p className="font-mono font-bold break-all text-amber-700">{tutor.tutor_id}</p>
                                         </div>
                                     </div>
 
                                     <div className="flex items-start gap-3 rounded-lg bg-blue-50 p-3">
-                                        <Mail className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                                        <Mail className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600" />
                                         <div className="min-w-0 flex-1">
-                                            <p className="text-xs font-semibold uppercase text-gray-500">Email</p>
-                                            <p className="font-medium text-blue-700 break-all">{tutor.user?.email}</p>
+                                            <p className="text-xs font-semibold text-gray-500 uppercase">Email</p>
+                                            <p className="font-medium break-all text-blue-700">{tutor.user?.email}</p>
                                         </div>
                                     </div>
 
                                     {tutor.number && (
                                         <div className="flex items-start gap-3 rounded-lg bg-green-50 p-3">
-                                            <Phone className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                                            <Phone className="mt-0.5 h-5 w-5 flex-shrink-0 text-green-600" />
                                             <div className="min-w-0 flex-1">
-                                                <p className="text-xs font-semibold uppercase text-gray-500">Phone</p>
-                                                <p className="font-medium text-green-700 break-all">{tutor.number}</p>
+                                                <p className="text-xs font-semibold text-gray-500 uppercase">Phone</p>
+                                                <p className="font-medium break-all text-green-700">{tutor.number}</p>
                                             </div>
                                         </div>
                                     )}
 
                                     {tutor.portfolio_link && (
                                         <div className="flex items-start gap-3 rounded-lg bg-purple-50 p-3">
-                                            <Globe className="h-5 w-5 text-purple-600 flex-shrink-0 mt-0.5" />
+                                            <Globe className="mt-0.5 h-5 w-5 flex-shrink-0 text-purple-600" />
                                             <div className="min-w-0 flex-1">
-                                                <p className="text-xs font-semibold uppercase text-gray-500">Portfolio</p>
+                                                <p className="text-xs font-semibold text-gray-500 uppercase">Portfolio</p>
                                                 <a
                                                     href={tutor.portfolio_link}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className="font-medium text-purple-700 hover:underline break-all text-sm"
+                                                    className="text-sm font-medium break-all text-purple-700 hover:underline"
                                                 >
                                                     {tutor.portfolio_link}
                                                 </a>
                                             </div>
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+
+                            <Card className="mt-7 border-amber-200 shadow-md">
+                                <CardHeader className="border-b border-amber-100 bg-gradient-to-r from-amber-50 to-orange-50 py-4">
+                                    <SectionHeader title="Parent Feedbacks" icon={Star} />
+                                </CardHeader>
+                                <CardContent className="pt-5">
+                                    {feedbacks.length === 0 ? (
+                                        <div className="text-sm text-gray-500">No feedbacks yet.</div>
+                                    ) : (
+                                        <div className="space-y-6">
+                                            {feedbacks.map((fb, idx) => (
+                                                <div key={idx} className="rounded-lg border border-amber-100 bg-amber-50 p-4">
+                                                    <div className="mb-1 flex items-center gap-2">
+                                                        <span className="font-semibold text-gray-900">{fb.parent_name}</span>
+                                                        <span className="text-xs text-gray-400">{formatDate(fb.created_at)}</span>
+                                                    </div>
+                                                    <div className="mb-2 flex items-center gap-1">
+                                                        {[1, 2, 3, 4, 5].map((star) => (
+                                                            <span key={star}>
+                                                                <svg
+                                                                    width="16"
+                                                                    height="16"
+                                                                    fill={fb.rating >= star ? '#f59e42' : 'none'}
+                                                                    stroke="#f59e42"
+                                                                    strokeWidth="1.5"
+                                                                    viewBox="0 0 24 24"
+                                                                >
+                                                                    <polygon points="12 17.27 18.18 21 16.54 13.97 22 9.24 14.81 8.63 12 2 9.19 8.63 2 9.24 7.46 13.97 5.82 21 12 17.27" />
+                                                                </svg>
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                    <div className="whitespace-pre-line text-gray-700">{fb.feedback}</div>
+                                                </div>
+                                            ))}
                                         </div>
                                     )}
                                 </CardContent>
@@ -259,7 +364,7 @@ export default function TutorShow({ tutor }: Props) {
                                     <SectionHeader title="Profile & Basic Information" icon={BookOpen} />
                                 </CardHeader>
                                 <CardContent className="pt-5">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                         <InfoRow label="Subject" value={tutor.subject || 'Not specified'} />
                                         <InfoRow label="Specializations" value={tutor.specializations} />
                                         <InfoRow label="Bio" value={tutor.bio} fullWidth />
@@ -273,7 +378,7 @@ export default function TutorShow({ tutor }: Props) {
                                     <SectionHeader title="Personal Information" icon={User} />
                                 </CardHeader>
                                 <CardContent className="pt-5">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                         <InfoRow label="Full Name" value={tutor.full_name} />
                                         <InfoRow label="Email" value={tutor.email} />
                                         <InfoRow label="Birthdate" value={tutor.birthdate} />
@@ -292,7 +397,7 @@ export default function TutorShow({ tutor }: Props) {
                                     <SectionHeader title="Family Information" icon={Home} />
                                 </CardHeader>
                                 <CardContent className="pt-5">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                         <InfoRow label="Mother's Name" value={tutor.mother_name} />
                                         <InfoRow label="Father's Name" value={tutor.father_name} />
                                     </div>
@@ -305,7 +410,7 @@ export default function TutorShow({ tutor }: Props) {
                                     <SectionHeader title="Educational Background" icon={GraduationCap} />
                                 </CardHeader>
                                 <CardContent className="pt-5">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                         <InfoRow label="High School" value={tutor.high_school} />
                                         <InfoRow label="College/University" value={tutor.college_school} />
                                         <InfoRow label="College Course" value={tutor.college_course} />
@@ -321,14 +426,22 @@ export default function TutorShow({ tutor }: Props) {
                                     <SectionHeader title="Teaching Experience" icon={Briefcase} />
                                 </CardHeader>
                                 <CardContent className="pt-5">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                         <InfoRow label="Employment Status" value={formatEnum(tutor.employment_status)} />
                                         <InfoRow label="Current Employer" value={tutor.current_employer} />
                                         <InfoRow label="Working Hours" value={tutor.working_hours} />
                                         <InfoRow label="Tutoring Duration" value={tutor.tutoring_experience_duration} />
                                         <InfoRow label="School Teaching Experience" value={tutor.has_school_teaching_experience ? '✓ Yes' : '✗ No'} />
                                         <InfoRow label="School Teaching Duration" value={tutor.school_teaching_experience_duration} />
-                                        <InfoRow label="Tutoring Experience Levels" value={safeArray(tutor.tutoring_experience_levels).length > 0 ? safeArray(tutor.tutoring_experience_levels).join(', ') : undefined} fullWidth />
+                                        <InfoRow
+                                            label="Tutoring Experience Levels"
+                                            value={
+                                                safeArray(tutor.tutoring_experience_levels).length > 0
+                                                    ? safeArray(tutor.tutoring_experience_levels).join(', ')
+                                                    : undefined
+                                            }
+                                            fullWidth
+                                        />
                                         <InfoRow label="Previous Clients" value={tutor.previous_clients} fullWidth />
                                     </div>
                                 </CardContent>
@@ -340,7 +453,7 @@ export default function TutorShow({ tutor }: Props) {
                                     <SectionHeader title="Teaching Preferences & Skills" icon={Heart} />
                                 </CardHeader>
                                 <CardContent className="pt-5">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                         <InfoRow label="Favorite Subject" value={tutor.favorite_subject_to_teach} />
                                         <InfoRow label="Easiest Subject" value={tutor.easiest_subject_to_teach} />
                                         <InfoRow label="Most Difficult Subject" value={tutor.most_difficult_subject_to_teach} />
@@ -348,10 +461,40 @@ export default function TutorShow({ tutor }: Props) {
                                         <InfoRow label="Harder School Level" value={tutor.harder_school_level_to_teach} />
                                         <InfoRow label="Work Preference" value={formatEnum(tutor.work_preference)} />
                                         <InfoRow label="Class Size Preference" value={formatEnum(tutor.class_size_preference)} />
-                                        <InfoRow label="Reasons for Loving Teaching" value={safeArray(tutor.reasons_love_teaching).length > 0 ? safeArray(tutor.reasons_love_teaching).join(', ') : undefined} fullWidth />
-                                        <InfoRow label="Teaching Values" value={safeArray(tutor.teaching_values).length > 0 ? safeArray(tutor.teaching_values).join(', ') : undefined} fullWidth />
-                                        <InfoRow label="Application Reasons" value={safeArray(tutor.application_reasons).length > 0 ? safeArray(tutor.application_reasons).join(', ') : undefined} fullWidth />
-                                        <InfoRow label="Outside Activities" value={safeArray(tutor.outside_activities).length > 0 ? safeArray(tutor.outside_activities).join(', ') : undefined} fullWidth />
+                                        <InfoRow
+                                            label="Reasons for Loving Teaching"
+                                            value={
+                                                safeArray(tutor.reasons_love_teaching).length > 0
+                                                    ? safeArray(tutor.reasons_love_teaching).join(', ')
+                                                    : undefined
+                                            }
+                                            fullWidth
+                                        />
+                                        <InfoRow
+                                            label="Teaching Values"
+                                            value={
+                                                safeArray(tutor.teaching_values).length > 0 ? safeArray(tutor.teaching_values).join(', ') : undefined
+                                            }
+                                            fullWidth
+                                        />
+                                        <InfoRow
+                                            label="Application Reasons"
+                                            value={
+                                                safeArray(tutor.application_reasons).length > 0
+                                                    ? safeArray(tutor.application_reasons).join(', ')
+                                                    : undefined
+                                            }
+                                            fullWidth
+                                        />
+                                        <InfoRow
+                                            label="Outside Activities"
+                                            value={
+                                                safeArray(tutor.outside_activities).length > 0
+                                                    ? safeArray(tutor.outside_activities).join(', ')
+                                                    : undefined
+                                            }
+                                            fullWidth
+                                        />
                                     </div>
                                 </CardContent>
                             </Card>
@@ -362,9 +505,15 @@ export default function TutorShow({ tutor }: Props) {
                                     <SectionHeader title="Logistics" icon={MapPin} />
                                 </CardHeader>
                                 <CardContent className="pt-5">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <InfoRow label="Distance from Hub" value={tutor.distance_from_hub_minutes ? `${tutor.distance_from_hub_minutes} min` : undefined} />
-                                        <InfoRow label="Distance from Work" value={tutor.distance_from_work_minutes ? `${tutor.distance_from_work_minutes} min` : undefined} />
+                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                        <InfoRow
+                                            label="Distance from Hub"
+                                            value={tutor.distance_from_hub_minutes ? `${tutor.distance_from_hub_minutes} min` : undefined}
+                                        />
+                                        <InfoRow
+                                            label="Distance from Work"
+                                            value={tutor.distance_from_work_minutes ? `${tutor.distance_from_work_minutes} min` : undefined}
+                                        />
                                         <InfoRow label="Transportation Mode" value={formatEnum(tutor.transportation_mode)} />
                                     </div>
                                 </CardContent>
@@ -376,18 +525,37 @@ export default function TutorShow({ tutor }: Props) {
                                     <SectionHeader title="Self-Ratings" icon={Star} />
                                 </CardHeader>
                                 <CardContent className="pt-5">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                        <InfoRow label="Enjoy Playing with Kids" value={<RatingDots rating={tutor.enjoy_playing_with_kids_rating} />} />
+                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                        <InfoRow
+                                            label="Enjoy Playing with Kids"
+                                            value={<RatingDots rating={tutor.enjoy_playing_with_kids_rating} />}
+                                        />
                                         <InfoRow label="Need Job" value={<RatingDots rating={tutor.need_job_rating} />} />
                                         <InfoRow label="Public Speaking" value={<RatingDots rating={tutor.public_speaking_rating} />} />
                                         <InfoRow label="Penmanship" value={<RatingDots rating={tutor.penmanship_rating} />} />
                                         <InfoRow label="Creativity" value={<RatingDots rating={tutor.creativity_rating} />} />
                                         <InfoRow label="English Proficiency" value={<RatingDots rating={tutor.english_proficiency_rating} />} />
                                         <InfoRow label="Cleanliness Importance" value={<RatingDots rating={tutor.cleanliness_importance_rating} />} />
-                                        <InfoRow label="Organization Importance" value={<RatingDots rating={tutor.organization_importance_rating} />} />
-                                        <InfoRow label="Shared Environment Comfort" value={<RatingDots rating={tutor.shared_environment_comfort_rating} />} />
-                                        <InfoRow label="Preferred Toys/Games" value={safeArray(tutor.preferred_toys_games).length > 0 ? safeArray(tutor.preferred_toys_games).join(', ') : undefined} />
-                                        <InfoRow label="Annoyances" value={safeArray(tutor.annoyances).length > 0 ? safeArray(tutor.annoyances).join(', ') : undefined} />
+                                        <InfoRow
+                                            label="Organization Importance"
+                                            value={<RatingDots rating={tutor.organization_importance_rating} />}
+                                        />
+                                        <InfoRow
+                                            label="Shared Environment Comfort"
+                                            value={<RatingDots rating={tutor.shared_environment_comfort_rating} />}
+                                        />
+                                        <InfoRow
+                                            label="Preferred Toys/Games"
+                                            value={
+                                                safeArray(tutor.preferred_toys_games).length > 0
+                                                    ? safeArray(tutor.preferred_toys_games).join(', ')
+                                                    : undefined
+                                            }
+                                        />
+                                        <InfoRow
+                                            label="Annoyances"
+                                            value={safeArray(tutor.annoyances).length > 0 ? safeArray(tutor.annoyances).join(', ') : undefined}
+                                        />
                                         <InfoRow label="Preferred Teaching Language" value={tutor.preferred_teaching_language} />
                                     </div>
                                 </CardContent>
@@ -399,7 +567,7 @@ export default function TutorShow({ tutor }: Props) {
                                     <SectionHeader title="Technology & Teaching Methods" icon={BrainCircuit} />
                                 </CardHeader>
                                 <CardContent className="pt-5">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                         <InfoRow label="EdTech Opinion" value={tutor.edtech_opinion} />
                                         <InfoRow label="Needs Phone While Teaching" value={tutor.needs_phone_while_teaching ? '✓ Yes' : '✗ No'} />
                                         <InfoRow label="Phone Usage Reason" value={tutor.phone_usage_reason} />
@@ -417,11 +585,19 @@ export default function TutorShow({ tutor }: Props) {
                                     <SectionHeader title="Commitment" icon={Calendar} />
                                 </CardHeader>
                                 <CardContent className="pt-5">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                         <InfoRow label="Expected Tenure" value={formatEnum(tutor.expected_tenure)} />
                                         <InfoRow label="Work Frequency" value={formatEnum(tutor.preferred_workdays_frequency)} />
                                         <InfoRow label="Preferred Schedule" value={formatEnum(tutor.preferred_schedule)} />
-                                        <InfoRow label="Preferred Workdays" value={safeArray(tutor.preferred_workdays).length > 0 ? safeArray(tutor.preferred_workdays).join(', ') : undefined} fullWidth />
+                                        <InfoRow
+                                            label="Preferred Workdays"
+                                            value={
+                                                safeArray(tutor.preferred_workdays).length > 0
+                                                    ? safeArray(tutor.preferred_workdays).join(', ')
+                                                    : undefined
+                                            }
+                                            fullWidth
+                                        />
                                     </div>
                                 </CardContent>
                             </Card>
@@ -432,7 +608,7 @@ export default function TutorShow({ tutor }: Props) {
                                     <SectionHeader title="Work Environment Preferences" icon={Users} />
                                 </CardHeader>
                                 <CardContent className="pt-5">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                         <InfoRow label="Teaching Style Preference" value={formatEnum(tutor.teaching_style_preference)} />
                                         <InfoRow label="OK with Team Meetings" value={tutor.ok_with_team_meetings ? '✓ Yes' : '✗ No'} />
                                         <InfoRow label="OK with Parent Meetings" value={tutor.ok_with_parent_meetings ? '✓ Yes' : '✗ No'} />

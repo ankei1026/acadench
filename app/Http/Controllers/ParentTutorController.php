@@ -10,7 +10,7 @@ class ParentTutorController extends Controller
 {
     public function index()
     {
-        $tutors = Tutor::with('user')
+        $tutors = Tutor::with('user', 'ratings')
             ->where('status', 'active')
             ->orderBy('created_at', 'desc')
             ->get()
@@ -26,6 +26,7 @@ class ParentTutorController extends Controller
                     'specializations' => is_array($tutor->specializations) ? $tutor->specializations : (is_string($tutor->specializations) ? json_decode($tutor->specializations, true) : []),
                     'portfolio_link' => $tutor->portfolio_link,
                     'number' => $tutor->number,
+                    'average_rating' => $tutor->average_rating ? round($tutor->average_rating, 2) : null,
                 ];
             });
 
@@ -36,7 +37,7 @@ class ParentTutorController extends Controller
 
     public function show($tutor_id)
     {
-        $tutor = Tutor::with('user')
+        $tutor = Tutor::with(['user', 'ratings' => function($q) { $q->with('parent'); }])
             ->where('tutor_id', $tutor_id)
             ->where('status', 'active')
             ->firstOrFail();
@@ -44,6 +45,18 @@ class ParentTutorController extends Controller
         $tutorEmail = $tutor->user?->email;
 
         // Base tutor data
+        $feedbacks = $tutor->ratings
+            ->whereNotNull('feedback')
+            ->sortByDesc('created_at')
+            ->map(function($rating) {
+                return [
+                    'parent_name' => $rating->parent?->name ?? 'Parent',
+                    'rating' => $rating->rating,
+                    'feedback' => $rating->feedback,
+                    'created_at' => $rating->created_at?->format('Y-m-d H:i'),
+                ];
+            })->values();
+
         $tutorData = [
             // Basic Info
             'tutor_id' => $tutor->tutor_id,
@@ -56,6 +69,7 @@ class ParentTutorController extends Controller
             'specializations' => is_array($tutor->specializations) ? $tutor->specializations : (is_string($tutor->specializations) ? json_decode($tutor->specializations, true) : []),
             'portfolio_link' => $tutor->portfolio_link,
             'number' => $tutor->number,
+            'average_rating' => $tutor->average_rating ? round($tutor->average_rating, 2) : null,
 
             // Personal Information
             'full_name' => $tutor->full_name,
@@ -178,6 +192,7 @@ class ParentTutorController extends Controller
 
         return Inertia::render('Parent/Tutors/Show', [
             'tutor' => $tutorData,
+            'feedbacks' => $feedbacks,
         ]);
     }
 }
