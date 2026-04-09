@@ -212,11 +212,14 @@ class Tutor extends Model
     /**
      * Get the user that owns the tutor profile.
      */
-    public function user()
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * Get the bookings for the tutor.
+     */
     public function bookings(): HasMany
     {
         return $this->hasMany(Booking::class, 'tutor_id', 'tutor_id');
@@ -230,13 +233,35 @@ class Tutor extends Model
         return $this->belongsToMany(BookingSession::class, 'booking_session_tutor', 'tutor_id', 'session_id');
     }
 
+    /**
+     * Get payroll records for this tutor.
+     */
     public function payrolls(): HasMany
     {
         return $this->hasMany(Payroll::class, 'tutor_id', 'tutor_id');
     }
 
+    /**
+     * Get payroll records where this tutor was substituted.
+     */
     public function substitutePayrolls(): HasMany
     {
         return $this->hasMany(Payroll::class, 'original_tutor_id', 'tutor_id');
+    }
+
+    /**
+     * Get all ratings for the tutor.
+     */
+    public function ratings(): HasMany
+    {
+        return $this->hasMany(\App\Models\Rating::class, 'tutor_id', 'tutor_id');
+    }
+
+    /**
+     * Get the average rating for the tutor.
+     */
+    public function getAverageRatingAttribute(): ?float
+    {
+        return $this->ratings()->avg('rating');
     }
 }

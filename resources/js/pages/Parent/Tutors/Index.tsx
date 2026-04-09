@@ -6,6 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useState } from 'react';
+import { router } from '@inertiajs/react';
+import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 
 interface Tutor {
     tutor_id: string;
@@ -17,6 +21,7 @@ interface Tutor {
     specializations: string[];
     portfolio_link: string | null;
     number: string | null;
+    average_rating?: number | null;
 }
 
 interface TutorsPageProps {
@@ -34,6 +39,10 @@ const ITEMS_PER_PAGE = 6;
 
 export default function Tutors({ tutors }: TutorsPageProps) {
     const [currentPage, setCurrentPage] = useState(1);
+    const [openDialog, setOpenDialog] = useState(false);
+    const [selectedTutor, setSelectedTutor] = useState<Tutor | null>(null);
+    const [rating, setRating] = useState(0);
+    const [feedback, setFeedback] = useState('');
 
     // Calculate pagination
     const totalPages = Math.ceil(tutors.length / ITEMS_PER_PAGE);
@@ -45,6 +54,32 @@ export default function Tutors({ tutors }: TutorsPageProps) {
         setCurrentPage(page);
         // Scroll to top of tutors grid
         document.getElementById('tutors-grid')?.scrollIntoView({ behavior: 'smooth' });
+    };
+
+    // Handler to open dialog
+    const handleRateTutor = (tutor: Tutor) => {
+        setSelectedTutor(tutor);
+        setOpenDialog(true);
+        setRating(0);
+        setFeedback('');
+    };
+
+    // Handler to submit rating
+    const handleSubmitRating = () => {
+        if (!selectedTutor) return;
+        router.post('/parent/ratings', {
+            tutor_id: selectedTutor.tutor_id,
+            rating,
+            feedback,
+        }, {
+            onSuccess: () => {
+                toast.success('Rating submitted successfully!');
+                setOpenDialog(false);
+            },
+            onError: (errors) => {
+                toast.error('Failed to submit rating. Please try again.');
+            },
+        });
     };
 
     return (
@@ -87,7 +122,7 @@ export default function Tutors({ tutors }: TutorsPageProps) {
                         <div id="tutors-grid" className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                             {currentTutors.map((tutor) => (
                                 <Card key={tutor.tutor_id} className="border-amber-200 bg-white shadow-md transition-all hover:shadow-lg">
-                                    <CardHeader className="pb-4">
+                                    <CardHeader className="pb-1">
                                         <div className="flex items-start justify-between">
                                             <Avatar className="h-16 w-16">
                                                 <AvatarImage src={tutor.photo || undefined} alt={tutor.name} />
@@ -99,6 +134,21 @@ export default function Tutors({ tutors }: TutorsPageProps) {
                                         <div className="mt-2">
                                             <CardTitle className="text-lg font-semibold text-gray-900">{tutor.name}</CardTitle>
                                             {tutor.subject && <p className="text-sm font-medium text-amber-600">{tutor.subject}</p>}
+                                            {/* Average Rating */}
+                                            {typeof tutor.average_rating === 'number' ? (
+                                                <div className="flex items-center gap-1 mt-1">
+                                                    {[1,2,3,4,5].map((star) => (
+                                                        <Star
+                                                            key={star}
+                                                            className={`h-4 w-4 ${tutor.average_rating >= star ? 'text-amber-500' : 'text-gray-300'}`}
+                                                            fill={tutor.average_rating >= star ? '#f59e42' : 'none'}
+                                                        />
+                                                    ))}
+                                                    <span className="ml-1 text-xs text-gray-600">{tutor.average_rating.toFixed(2)}</span>
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center gap-1 mt-1 text-xs text-gray-400">No rating</div>
+                                            )}
                                         </div>
                                     </CardHeader>
                                     <CardContent className="space-y-3">
@@ -146,11 +196,20 @@ export default function Tutors({ tutors }: TutorsPageProps) {
                                         </div>
 
                                         {/* View Profile Button */}
-                                        <Link href={`/parent/tutors/${tutor.tutor_id}`} className="block">
-                                            <Button className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600">
-                                                View Profile
+                                        <div className="flex gap-2">
+                                            <Link href={`/parent/tutors/${tutor.tutor_id}`} className="flex-1">
+                                                <Button className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600">
+                                                    View Profile
+                                                </Button>
+                                            </Link>
+                                            <Button
+                                                variant="outline"
+                                                className="w-full flex-1 border-amber-300 text-amber-700 hover:bg-amber-50"
+                                                onClick={() => handleRateTutor(tutor)}
+                                            >
+                                                Rate Tutor
                                             </Button>
-                                        </Link>
+                                        </div>
                                     </CardContent>
                                 </Card>
                             ))}
@@ -232,6 +291,62 @@ export default function Tutors({ tutors }: TutorsPageProps) {
                     </div>
                 )}
             </div>
+
+            {/* AlertDialog for rating */}
+            <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Rate Tutor</DialogTitle>
+                    </DialogHeader>
+                    {selectedTutor && (
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-2">
+                                <Avatar className="h-8 w-8">
+                                    <AvatarImage src={selectedTutor.photo || undefined} alt={selectedTutor.name} />
+                                    <AvatarFallback className="bg-gradient-to-r from-amber-500 to-orange-500 text-white">
+                                        {selectedTutor.name.charAt(0).toUpperCase()}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <span className="font-semibold text-gray-900">{selectedTutor.name}</span>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Rating</label>
+                                <div className="flex gap-1">
+                                    {[1,2,3,4,5].map((star) => (
+                                        <button
+                                            key={star}
+                                            type="button"
+                                            className={`h-6 w-6 rounded-full border ${rating >= star ? 'bg-amber-400 border-amber-500' : 'bg-gray-200 border-gray-300'} flex items-center justify-center`}
+                                            onClick={() => setRating(star)}
+                                            aria-label={`Rate ${star}`}
+                                        >
+                                            <Star className={`h-4 w-4 ${rating >= star ? 'text-amber-700' : 'text-gray-400'}`} />
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Feedback</label>
+                                <Textarea
+                                    value={feedback}
+                                    onChange={e => setFeedback(e.target.value)}
+                                    placeholder="Write your comments..."
+                                    className="min-h-[60px]"
+                                />
+                            </div>
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <Button
+                            className="bg-gradient-to-r from-amber-500 to-orange-500 text-white"
+                            onClick={handleSubmitRating}
+                            disabled={rating === 0}
+                        >
+                            Submit Rating
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </AppLayout>
     );
 }
