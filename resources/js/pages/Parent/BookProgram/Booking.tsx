@@ -40,6 +40,7 @@ interface Program {
     price: number | string;
     session_count: number;
     setting?: string;
+    tutor_capacity?: number;
     // Add dynamic pricing fields with discount_tier
     dynamic_pricing?: {
         base_price: number;
@@ -211,19 +212,31 @@ export default function Booking({
     const [currentPricing, setCurrentPricing] = useState(program.dynamic_pricing);
     const [pricingError, setPricingError] = useState<string | null>(null);
 
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, processing, errors } = useForm<{
+        prog_id: string;
+        learner_id: string;
+        book_date: string;
+        session_count: number;
+        notes: string;
+        request_tutor: boolean;
+        tutor_ids: string[];
+        amount: number;
+        downpayment_amount: string | number;
+        payment_type_id: string;
+        receipt_image: File | null;
+    }>({
         prog_id: program.prog_id,
         learner_id: '',
         book_date: '',
         session_count: program.session_count || 1,
         notes: '',
         request_tutor: false,
-        tutor_id: '',
+        tutor_ids: [], // Array for multiple tutor IDs
         amount: program.dynamic_pricing?.final_price || Number(program.price) * (program.session_count || 1),
         // Downpayment fields
         downpayment_amount: '' as string | number,
         payment_type_id: '',
-        receipt_image: null as File | null,
+        receipt_image: null,
     });
 
     // Debug log to see what's coming from the API
@@ -238,6 +251,7 @@ export default function Booking({
             discount_tier: currentPricing?.discount_tier,
             min_sessions_required: currentPricing?.min_sessions_required,
         });
+        console.log('DEBUG: program.tutor_capacity =', program.tutor_capacity, typeof program.tutor_capacity);
     }, [currentPricing, data.session_count, program]);
 
     // Function to fetch pricing
@@ -757,25 +771,49 @@ export default function Booking({
                                     />
                                     <Label htmlFor="request-tutor" className="font-medium text-gray-700">
                                         <Settings className="mr-1 inline h-4 w-4" />
-                                        Request a Tutor (optional)
+                                        Choose Tutors
                                     </Label>
                                 </div>
                                 {data.request_tutor && (
                                     <>
-                                        <Select value={data.tutor_id} onValueChange={(value) => setData('tutor_id', value)}>
-                                            <SelectTrigger className="border-amber-200 focus:ring-amber-500">
-                                                <SelectValue placeholder="Select tutor" />
-                                            </SelectTrigger>
-                                            <SelectContent>
+                                        <div className="space-y-2">
+                                            <Label className="text-sm font-medium text-gray-700">
+                                                Select up to {program.tutor_capacity || 1} tutor(s):
+                                            </Label>
+                                            <div className="grid grid-cols-1 gap-2">
                                                 {tutors.map((tutor) => (
-                                                    <SelectItem key={tutor.tutor_id} value={tutor.tutor_id}>
-                                                        {tutor.name}
-                                                        {tutor.subject ? ` • ${tutor.subject}` : ''}
-                                                    </SelectItem>
+                                                    <div key={tutor.tutor_id} className="flex items-center gap-2">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={data.tutor_ids.includes(String(tutor.tutor_id))}
+                                                            onChange={e => {
+                                                                let updated = [...data.tutor_ids];
+                                                                const tid = String(tutor.tutor_id);
+                                                                if (e.target.checked) {
+                                                                    if (updated.length < (program.tutor_capacity || 1)) {
+                                                                        updated.push(tid);
+                                                                    } else {
+                                                                        toast.error(`You can only select up to ${program.tutor_capacity || 1} tutor(s).`);
+                                                                        return;
+                                                                    }
+                                                                } else {
+                                                                    updated = updated.filter((id) => id !== tid);
+                                                                }
+                                                                setData('tutor_ids', updated);
+                                                            }}
+                                                            id={`tutor-${tutor.tutor_id}`}
+                                                            className="mr-2 accent-amber-500"
+                                                        />
+                                                        <Label htmlFor={`tutor-${tutor.tutor_id}`} className="text-gray-700">
+                                                            {tutor.name}
+                                                            {tutor.subject ? ` • ${tutor.subject}` : ''}
+                                                        </Label>
+                                                    </div>
                                                 ))}
-                                            </SelectContent>
-                                        </Select>
-                                        {errors.tutor_id && <p className="text-sm text-red-600">{errors.tutor_id}</p>}
+                                            </div>
+                                            {errors.tutor_ids && <p className="text-sm text-red-600">{errors.tutor_ids}</p>}
+                                            <p className="text-xs text-gray-500">You can select up to {program.tutor_capacity || 1} tutor(s).</p>
+                                        </div>
                                     </>
                                 )}
                             </div>
@@ -910,7 +948,8 @@ export default function Booking({
                                     !data.learner_id ||
                                     !data.book_date ||
                                     data.session_count < program.session_count ||
-                                    (data.request_tutor && !data.tutor_id) ||
+                                    (data.request_tutor && data.tutor_ids.length === 0) ||
+                                    (data.request_tutor && data.tutor_ids.length > (program.tutor_capacity || 1)) ||
                                     !data.payment_type_id ||
                                     downpaymentNum < 500
                                 }
@@ -935,3 +974,20 @@ export default function Booking({
         </AppLayout>
     );
 }
+
+const submitBooking = () => {
+    post('/parent/book-program', {
+        preserveScroll: true,
+        forceFormData: true,
+        onSuccess: () => {
+            toast.success('Booking submitted with downpayment', {
+                description: `${program.name} for ${data.session_count} session(s). Awaiting admin approval.`,
+            });
+        },
+        onError: (errors) => {
+            toast.error('Unable to submit booking', {
+                description: Object.values(errors).join(', ') || 'Please check the form fields and try again.',
+            });
+        },
+    });
+};

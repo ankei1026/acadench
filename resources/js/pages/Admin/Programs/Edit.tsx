@@ -24,6 +24,7 @@ interface Program {
     session_count: number;
     description?: string;
     setting?: string;
+    tutor_capacity?: number; // Add tutor_capacity
 }
 
 interface EditProgramProps {
@@ -89,6 +90,7 @@ export default function EditProgram({ program }: EditProgramProps) {
         session_count: program.session_count.toString(),
         description: program.description || '',
         setting: program.setting || '',
+        tutor_capacity: program.tutor_capacity?.toString() || '', // Add tutor_capacity
     });
 
     const breadcrumbs: BreadcrumbItem[] = [
@@ -333,6 +335,23 @@ export default function EditProgram({ program }: EditProgramProps) {
                                         {errors.session_count && <p className="text-sm text-destructive">{errors.session_count}</p>}
                                     </div>
                                 </div>
+                            </div>
+
+                            {/* Tutor Capacity */}
+                            <div className="space-y-2">
+                                <Label htmlFor="tutor_capacity">Tutor Capacity</Label>
+                                <Input
+                                    id="tutor_capacity"
+                                    type="number"
+                                    min={1}
+                                    value={data.tutor_capacity}
+                                    onChange={(e) => setData('tutor_capacity', e.target.value)}
+                                    placeholder="e.g., 3"
+                                    required
+                                />
+                                {errors.tutor_capacity && (
+                                    <div className="text-destructive text-sm">{errors.tutor_capacity}</div>
+                                )}
                             </div>
 
                             {/* Form Actions */}

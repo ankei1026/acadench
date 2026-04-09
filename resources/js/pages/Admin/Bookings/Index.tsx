@@ -19,7 +19,8 @@ interface Booking {
     parent_id: number;
     learner_id: string;
     prog_id: string;
-    tutor_id: string | null;
+    tutor_ids?: string[]; // for raw ids if needed
+    tutors?: { tutor_id: string; name: string }[]; // for display
     book_date: string;
     session_count: number;
     status: 'pending' | 'approved' | 'declined';
@@ -48,15 +49,12 @@ interface Booking {
         name: string;
         prog_type: string;
     };
-    tutor?: {
-        tutor_id: string;
-        name: string;
-    };
 }
 
 interface Tutor {
     tutor_id: string;
     name: string;
+
 }
 
 interface BookingsPageProps {

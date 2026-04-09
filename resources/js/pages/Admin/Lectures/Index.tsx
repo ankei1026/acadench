@@ -2,11 +2,11 @@ import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
-import { Video, Link as LinkIcon, BookOpen, User, Plus, Pencil, Trash2, ExternalLink, Calendar, Clock, FileText } from 'lucide-react';
+import { Video, BookOpen, User, Pencil, Trash2, ExternalLink, Calendar, Clock, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { formatDate } from '@/lib/dateTimeFormat';
@@ -41,17 +41,12 @@ interface LectureRow {
         parent?: {
             name: string;
         } | null;
-        tutor?: {
-            tutor_id: string;
-            first_name: string;
-            last_name: string;
-        } | null;
     } | null;
 }
 
 interface AvailableBooking {
     book_id: string;
-    setting: string; // 'online' | 'hub' | 'onsite' etc.
+    setting: string;
     program_name: string;
     learner_name: string;
     parent_name: string;
@@ -82,7 +77,6 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-// Helper to calculate end date
 const calculateEndDate = (startDate: string | null, sessionCount: number): string | null => {
     if (!startDate) return null;
     const start = new Date(startDate);
@@ -91,14 +85,12 @@ const calculateEndDate = (startDate: string | null, sessionCount: number): strin
     return end.toISOString().split('T')[0];
 };
 
-// Detect hub/onsite prog types (accept variants like "hub{onsite}")
 const isHubType = (progType?: string | null): boolean => {
     if (!progType) return false;
     const pt = progType.toLowerCase();
     return pt.includes('hub') || pt.includes('onsite');
 };
 
-// Helper to format time to 12-hour format with AM/PM
 const formatTime12Hour = (time: string | null): string => {
     if (!time) return '';
     const [hours, minutes] = time.split(':');
@@ -108,7 +100,6 @@ const formatTime12Hour = (time: string | null): string => {
     return `${hour12}:${minutes} ${ampm}`;
 };
 
-// Helper to convert abbreviated day names to full day names
 const formatDays = (days: string[] | string | null): string => {
     if (!days) return '';
     const dayMap: Record<string, string> = {
@@ -169,7 +160,6 @@ export default function AdminLectures({ lectures, available_bookings, available_
             name: lecture.name,
             platform: lecture.platform || '',
             platform_link: lecture.platform_link || '',
-            tutor_id: lecture.booking?.tutor?.tutor_id || '',
         });
         setEditIsHub(isHubType(lecture.program?.setting));
         setEditDialogOpen(true);
@@ -228,6 +218,13 @@ export default function AdminLectures({ lectures, available_bookings, available_
                             <p className="ml-2 text-gray-600">Manage lectures for bookings</p>
                         </div>
                         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+                            <Button
+                                onClick={() => setCreateDialogOpen(true)}
+                                className="bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600"
+                            >
+                                <Video className="mr-2 h-4 w-4" />
+                                Create Lecture
+                            </Button>
                             <DialogContent className="sm:max-w-[500px]">
                                 <DialogHeader>
                                     <DialogTitle>Create New Lecture</DialogTitle>
@@ -278,6 +275,10 @@ export default function AdminLectures({ lectures, available_bookings, available_
                                                     <SelectContent>
                                                         <SelectItem value="Google Meet">Google Meet</SelectItem>
                                                         <SelectItem value="Zoom">Zoom</SelectItem>
+                                                        <SelectItem value="Microsoft Teams">Microsoft Teams</SelectItem>
+                                                        <SelectItem value="Discord">Discord</SelectItem>
+                                                        <SelectItem value="Skype">Skype</SelectItem>
+                                                        <SelectItem value="Other">Other</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                             </div>
@@ -292,21 +293,6 @@ export default function AdminLectures({ lectures, available_bookings, available_
                                             </div>
                                         </>
                                     ) : null}
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="tutor">Assign Tutor (Optional)</Label>
-                                        <Select value={data.tutor_id} onValueChange={(value) => setData('tutor_id', value)}>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select a tutor" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {available_tutors.map((tutor) => (
-                                                    <SelectItem key={tutor.tutor_id} value={tutor.tutor_id}>
-                                                        {tutor.name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
                                 </div>
                                 <DialogFooter>
                                     <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
@@ -400,7 +386,6 @@ export default function AdminLectures({ lectures, available_bookings, available_
                                             <span className="font-medium text-gray-900">{lecture.platform || '—'}</span>
                                         </div>
 
-                                        {/* Schedule */}
                                         <div className="flex items-center gap-2 text-sm">
                                             <Calendar className="h-4 w-4 text-purple-500" />
                                             <span className="text-gray-600">Schedule:</span>
@@ -411,14 +396,12 @@ export default function AdminLectures({ lectures, available_bookings, available_
                                             </span>
                                         </div>
 
-                                        {/* Sessions */}
                                         <div className="flex items-center gap-2 text-sm">
                                             <Clock className="h-4 w-4 text-amber-500" />
                                             <span className="text-gray-600">Sessions:</span>
                                             <span className="font-medium text-gray-900">{lecture.booking?.session_count || 0}</span>
                                         </div>
 
-                                        {/* Time */}
                                         {lecture.program?.start_time && lecture.program?.end_time && (
                                             <div className="flex items-center gap-2 text-sm">
                                                 <Clock className="h-4 w-4 text-green-500" />
@@ -429,7 +412,6 @@ export default function AdminLectures({ lectures, available_bookings, available_
                                             </div>
                                         )}
 
-                                        {/* Days */}
                                         {lecture.program?.days && (
                                             <div className="flex items-center gap-2 text-sm">
                                                 <Calendar className="h-4 w-4 text-indigo-500" />
@@ -438,7 +420,6 @@ export default function AdminLectures({ lectures, available_bookings, available_
                                             </div>
                                         )}
 
-                                        {/* Parent */}
                                         {lecture.booking?.parent && (
                                             <div className="flex items-center gap-2 text-sm">
                                                 <User className="h-4 w-4 text-green-500" />
@@ -447,22 +428,7 @@ export default function AdminLectures({ lectures, available_bookings, available_
                                             </div>
                                         )}
 
-                                        {/* Tutor */}
-                                        {lecture.booking?.tutor ? (
-                                            <div className="flex items-center gap-2 text-sm">
-                                                <User className="h-4 w-4 text-purple-500" />
-                                                <span className="text-gray-600">Tutor:</span>
-                                                <span className="font-medium text-gray-900">{lecture.booking.tutor.name}</span>
-                                            </div>
-                                        ) : (
-                                            <div className="flex items-center gap-2 text-sm">
-                                                <User className="h-4 w-4 text-gray-300" />
-                                                <span className="text-gray-600">Tutor:</span>
-                                                <span className="text-gray-400">Not assigned</span>
-                                            </div>
-                                        )}
 
-                                        {/* Notes */}
                                         {lecture.booking?.notes && (
                                             <div className="flex items-start gap-2 text-sm">
                                                 <FileText className="mt-0.5 h-4 w-4 text-gray-400" />
@@ -473,7 +439,6 @@ export default function AdminLectures({ lectures, available_bookings, available_
                                             </div>
                                         )}
 
-                                        {/* Program */}
                                         {lecture.program && (
                                             <div className="flex items-center gap-2 text-sm">
                                                 <BookOpen className="h-4 w-4 text-amber-500" />
@@ -482,7 +447,6 @@ export default function AdminLectures({ lectures, available_bookings, available_
                                             </div>
                                         )}
 
-                                        {/* Action Buttons */}
                                         <div className="flex gap-2 pt-2">
                                             {lecture.platform_link && !isHubType(lecture.program?.setting) ? (
                                                 <a
@@ -551,21 +515,6 @@ export default function AdminLectures({ lectures, available_bookings, available_
                                     </div>
                                 </>
                             ) : null}
-                            <div className="grid gap-2">
-                                <Label htmlFor="edit-tutor">Assign Tutor (Optional)</Label>
-                                <Select value={data.tutor_id} onValueChange={(value) => setData('tutor_id', value)}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select a tutor" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {available_tutors.map((tutor) => (
-                                            <SelectItem key={tutor.tutor_id} value={tutor.tutor_id}>
-                                                {tutor.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
                         </div>
                         <DialogFooter>
                             <Button

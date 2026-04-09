@@ -27,6 +27,7 @@ import {
     BookAlert,
     CreditCard,
     Video,
+    CoinsIcon,
 } from 'lucide-react';
 
 import AppLogo from '@/components/app-logo';
@@ -66,7 +67,9 @@ const adminMainNavItems: NavItem[] = [
         items: [
             { title: 'Revenue Overview', href: '/admin/revenue' },
             { title: 'Refund Requests', href: '/admin/refund-requests' },
+            { title: 'Payroll', href: '/admin/payroll' },
             { title: 'Payment Types', href: '/admin/payment-setup' },
+
         ],
     },
     {
@@ -91,6 +94,7 @@ const adminMainNavItems: NavItem[] = [
         items: [
             { title: 'All Tutors', href: '/admin/tutors' },
             { title: 'Create Tutor', href: '/admin/tutors/create' },
+
             { title: 'Tutor Applications', href: '/admin/tutor-applications' },
         ],
     },
@@ -106,6 +110,11 @@ const tutorMainNavItems: NavItem[] = [
         title: 'Lectures',
         href: '/tutor/lectures',
         icon: Video,
+    },
+    {
+        title: 'Payroll',
+        href: '/tutor/payroll',
+        icon: CoinsIcon,
     },
     {
         title: 'Tutor Profile',

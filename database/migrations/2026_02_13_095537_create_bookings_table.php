@@ -23,8 +23,7 @@ return new class extends Migration
             $table->string('prog_id');
             $table->foreign('prog_id')->references('prog_id')->on('programs')->onDelete('cascade');
 
-            $table->string('tutor_id', 10)->nullable();
-            $table->foreign('tutor_id')->references('tutor_id')->on('tutors')->nullOnDelete();
+            $table->json('tutor_ids')->nullable();
 
             $table->date('book_date');
             $table->unsignedSmallInteger('session_count');

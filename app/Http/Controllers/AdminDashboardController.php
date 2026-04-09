@@ -5,160 +5,216 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\Booking;
+use App\Models\Tutor;
+use App\Models\BookingSession;
 use Carbon\Carbon;
 
 class AdminDashboardController extends Controller
 {
     public function index()
     {
-        // Get all active bookings
-        $activeBookings = Booking::with(['program', 'learner', 'tutor.user'])
+        // Get all active bookings with relationships
+        $activeBookings = Booking::with(['program', 'learner'])
             ->where('booking_status', 'active')
             ->get();
 
-        // Generate individual session events for calendar
-        $calendarEvents = [];
+        // Pre-load all tutors that might be needed
+        $allTutorIds = $activeBookings->flatMap(function ($booking) {
+            $tutorIds = $booking->tutor_ids;
+            if (is_string($tutorIds)) {
+                $tutorIds = json_decode($tutorIds, true) ?? [];
+            }
+            return is_array($tutorIds) ? $tutorIds : [];
+        })->filter()->unique()->values();
+
+        $allTutors = Tutor::with('user')
+            ->whereIn('tutor_id', $allTutorIds)
+            ->get()
+            ->keyBy('tutor_id');
+
+        // Manually attach tutors to each booking
         foreach ($activeBookings as $booking) {
-            if (!$booking->book_date) continue;
+            $tutorIds = $booking->tutor_ids;
+            if (is_string($tutorIds)) {
+                $tutorIds = json_decode($tutorIds, true) ?? [];
+            }
 
-            $startDate = Carbon::parse($booking->book_date);
-            $programDays = $this->parseProgramDays($booking->program?->days);
-
-            // Generate events for each session
-            for ($i = 0; $i < $booking->session_count; $i++) {
-                $sessionDate = $this->calculateSessionDate($startDate, $programDays, $i);
-                if ($sessionDate) {
-                    $calendarEvents[] = [
-                        'id' => $booking->book_id . '_' . ($i + 1),
-                        'title' => $booking->program?->name ?? 'Booking Session',
-                        'start' => $sessionDate->format('Y-m-d'),
-                        'allDay' => true,
-                        'extendedProps' => [
-                            'booking_id' => $booking->book_id,
-                            'session_number' => $i + 1,
-                            'total_sessions' => $booking->session_count,
-                            'learner' => $booking->learner?->name ?? null,
-                            'tutor' => $booking->tutor?->user?->name ?? null,
-                            'program' => $booking->program?->name ?? null,
-                            'start_time' => $booking->program?->start_time ?
-                                Carbon::parse($booking->program->start_time)->format('h:i A') : null,
-                            'end_time' => $booking->program?->end_time ?
-                                Carbon::parse($booking->program->end_time)->format('h:i A') : null,
-                        ],
-                    ];
+            $bookingTutors = collect();
+            if (is_array($tutorIds)) {
+                foreach ($tutorIds as $tutorId) {
+                    if (isset($allTutors[$tutorId])) {
+                        $bookingTutors->push($allTutors[$tutorId]);
+                    }
                 }
             }
+            $booking->setRelation('tutors', $bookingTutors);
         }
 
-        // Calculate real stats
+        // Get all sessions for active bookings
+        $sessions = BookingSession::with(['booking.program', 'booking.learner'])
+            ->whereHas('booking', function ($q) {
+                $q->where('booking_status', 'active');
+            })
+            ->orderBy('session_date')
+            ->get();
+
+        // Build calendar events with all required data
+        $calendarEvents = [];
+
+        // Group sessions by booking for session numbering
+        $sessionsByBooking = $sessions->groupBy('book_id');
+
+        foreach ($sessions as $session) {
+            $booking = $session->booking;
+            $program = $booking?->program;
+            $learner = $booking?->learner;
+
+            // First try to get tutors from session pivot, if empty fall back to booking tutors
+            $sessionTutors = $session->tutors;
+
+            // If no tutors assigned to session, use the booking's tutors
+            if ($sessionTutors->isEmpty() && $booking && $booking->relationLoaded('tutors')) {
+                $sessionTutors = $booking->tutors;
+            }
+
+            $tutorNames = [];
+            $tutorDetails = [];
+
+            foreach ($sessionTutors as $tutor) {
+                $tutorName = $tutor->user->name ?? $tutor->name ?? 'Unknown';
+                $tutorNames[] = $tutorName;
+                $tutorDetails[] = [
+                    'id' => $tutor->tutor_id,
+                    'name' => $tutorName,
+                    'email' => $tutor->user->email ?? $tutor->email ?? null,
+                ];
+            }
+
+            // Get booking tutor IDs for capacity reference
+            $bookingTutorIds = $booking->tutor_ids ?? [];
+            if (is_string($bookingTutorIds)) {
+                $bookingTutorIds = json_decode($bookingTutorIds, true) ?? [];
+            }
+
+            // Format tutor display string
+            $tutorDisplay = !empty($tutorNames)
+                ? implode(', ', $tutorNames)
+                : 'Not assigned';
+
+            // Calculate session number (1-based index within the booking)
+            $bookingSessions = $sessionsByBooking->get($session->book_id, collect());
+            $sessionNumber = $bookingSessions->search(function ($item) use ($session) {
+                return $item->session_id === $session->session_id;
+            }) + 1;
+
+            // Get program times safely
+            $startTime = null;
+            $endTime = null;
+
+            if ($program) {
+                if ($program->start_time instanceof Carbon) {
+                    $startTime = $program->start_time->format('H:i');
+                } elseif (is_string($program->start_time)) {
+                    $startTime = $program->start_time;
+                }
+
+                if ($program->end_time instanceof Carbon) {
+                    $endTime = $program->end_time->format('H:i');
+                } elseif (is_string($program->end_time)) {
+                    $endTime = $program->end_time;
+                }
+            }
+
+            $calendarEvents[] = [
+                'id' => $session->session_id,
+                'title' => $program?->name ?? 'Session',
+                'start' => $session->session_date instanceof Carbon
+                    ? $session->session_date->format('Y-m-d')
+                    : date('Y-m-d', strtotime($session->session_date)),
+                'allDay' => false,
+                'backgroundColor' => $this->getEventColor(count($tutorNames)),
+                'borderColor' => $this->getEventColor(count($tutorNames)),
+                'extendedProps' => [
+                    'session_id' => $session->session_id,
+                    'booking_id' => $booking?->book_id,
+                    'learner' => $learner?->name ?? $learner?->full_name ?? 'Not assigned',
+                    'tutor' => $tutorDisplay,
+                    'tutors' => $tutorDetails,
+                    'tutor_count' => count($tutorNames),
+                    'booking_tutor_ids' => is_array($bookingTutorIds) ? $bookingTutorIds : [],
+                    'booking_tutor_count' => is_array($bookingTutorIds) ? count($bookingTutorIds) : 0,
+                    'tutor_capacity' => $program?->tutor_capacity ?? null,
+                    'program' => $program?->name ?? 'No program',
+                    'program_type' => $program?->prog_type ?? null,
+                    'status' => $session->status,
+                    'notes' => $session->notes,
+                    'session_number' => $sessionNumber,
+                    'total_sessions' => $booking?->session_count ?? 1,
+                    'start_time' => $startTime,
+                    'end_time' => $endTime,
+                    'booking_status' => $booking?->booking_status,
+                ],
+            ];
+        }
+
+        // Calculate stats with safety checks
+        $uniqueLearners = $activeBookings->pluck('learner_id')->filter()->unique();
+
+        // Count unique tutors from the booking tutor_ids JSON field
+        $activeTutors = $activeBookings->flatMap(function ($booking) {
+            $tutorIds = $booking->tutor_ids;
+            if (is_string($tutorIds)) {
+                $tutorIds = json_decode($tutorIds, true) ?? [];
+            }
+            return is_array($tutorIds) ? $tutorIds : [];
+        })->filter()->unique();
+
         $stats = [
             'totalBookings' => $activeBookings->count(),
-            'activeLearners' => $activeBookings->pluck('learner_id')->unique()->count(),
-            'activeTutors' => $activeBookings->pluck('tutor_id')->filter()->unique()->count(),
-            'totalSessions' => $activeBookings->sum('session_count'),
+            'activeLearners' => $uniqueLearners->count(),
+            'activeTutors' => $activeTutors->count(),
+            'totalSessions' => $sessions->count(),
             'revenue' => $activeBookings->sum('amount') ?? 0,
-            'completedSessions' => 0, // You can calculate this from attendance if you have it
-            'upcomingSessions' => $activeBookings->sum('session_count'), // Placeholder
+            'completedSessions' => $sessions->where('status', BookingSession::STATUS_COMPLETED)->count(),
+            'upcomingSessions' => $sessions->filter(function ($session) {
+                $sessionDate = $session->session_date instanceof Carbon
+                    ? $session->session_date
+                    : Carbon::parse($session->session_date);
+                return $sessionDate->startOfDay()->gte(now()->startOfDay());
+            })->count(),
         ];
 
-        return Inertia::render('Admin/Dashboard', [
-            'activeBookings' => $activeBookings->map(function (Booking $b) {
+        // Get ALL active tutors for substitution dropdown
+        $availableTutors = Tutor::with('user')
+            ->where('status', 'active')
+            ->get()
+            ->map(function ($tutor) {
                 return [
-                    'book_id' => $b->book_id,
-                    'book_date' => $b->book_date ? $b->book_date->toDateString() : null,
-                    'session_count' => $b->session_count,
-                    'program' => $b->program ? [
-                        'name' => $b->program->name ?? null,
-                        'prog_type' => $b->program->prog_type ?? null,
-                        'start_time' => $b->program->start_time ?? null,
-                        'end_time' => $b->program->end_time ?? null,
-                        'days' => $b->program->days ?? null,
-                    ] : null,
-                    'learner' => $b->learner ? [
-                        'learner_id' => $b->learner->learner_id ?? null,
-                        'name' => $b->learner->name ?? null,
-                    ] : null,
-                    'tutor' => $b->tutor ? [
-                        'tutor_id' => $b->tutor->tutor_id ?? null,
-                        'name' => $b->tutor->user?->name ?? null,
-                    ] : null,
+                    'tutor_id' => $tutor->tutor_id,
+                    'name' => $tutor->user->name ?? $tutor->name ?? 'Unknown',
+                    'email' => $tutor->user->email ?? $tutor->email ?? null,
                 ];
-            }),
+            })
+            ->values()
+            ->toArray();
+
+        return Inertia::render('Admin/Dashboard', [
             'calendarEvents' => $calendarEvents,
             'stats' => $stats,
+            'availableTutors' => $availableTutors,
         ]);
     }
 
     /**
-     * Parse program days from JSON or comma-separated string
+     * Get event color based on tutor count
      */
-    private function parseProgramDays($days)
+    private function getEventColor($tutorCount)
     {
-        if (!$days) return [];
-
-        if (is_array($days)) return $days;
-
-        if (is_string($days)) {
-            // Try to parse JSON
-            $parsed = json_decode($days, true);
-            if (is_array($parsed)) return $parsed;
-
-            // Try comma-separated
-            return array_map('trim', explode(',', $days));
+        if ($tutorCount > 2) {
+            return '#f59e0b'; // Amber for multiple tutors
+        } elseif ($tutorCount === 2) {
+            return '#f97316'; // Orange for two tutors
         }
-
-        return [];
-    }
-
-    /**
-     * Calculate session date based on program days
-     */
-    private function calculateSessionDate(Carbon $startDate, array $programDays, int $sessionIndex): ?Carbon
-    {
-        if (empty($programDays)) {
-            // If no days specified, assume consecutive days
-            return $startDate->copy()->addDays($sessionIndex);
-        }
-
-        // Map day names to numbers (0 = Sunday, 1 = Monday, etc.)
-        $dayMap = [
-            'sunday' => 0, 'sun' => 0,
-            'monday' => 1, 'mon' => 1,
-            'tuesday' => 2, 'tue' => 2,
-            'wednesday' => 3, 'wed' => 3,
-            'thursday' => 4, 'thu' => 4,
-            'friday' => 5, 'fri' => 5,
-            'saturday' => 6, 'sat' => 6,
-        ];
-
-        $targetDays = [];
-        foreach ($programDays as $day) {
-            $dayLower = strtolower(trim($day));
-            if (isset($dayMap[$dayLower])) {
-                $targetDays[] = $dayMap[$dayLower];
-            }
-        }
-
-        if (empty($targetDays)) return $startDate->copy()->addDays($sessionIndex);
-
-        sort($targetDays);
-
-        $currentDate = $startDate->copy();
-        $foundSessions = 0;
-
-        while ($foundSessions <= $sessionIndex) {
-            $currentDayOfWeek = $currentDate->dayOfWeek;
-
-            if (in_array($currentDayOfWeek, $targetDays)) {
-                if ($foundSessions === $sessionIndex) {
-                    return $currentDate;
-                }
-                $foundSessions++;
-            }
-
-            $currentDate->addDay();
-        }
-
-        return null;
+        return '#ef4444'; // Red for single tutor
     }
 }

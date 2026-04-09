@@ -54,6 +54,7 @@ class Program extends Model
         'price',
         'setting',
         'session_count',
+        'tutor_capacity',
     ];
 
     /**
@@ -67,6 +68,7 @@ class Program extends Model
         'end_time' => 'datetime:H:i:s',
         'price' => 'decimal:2',
         'session_count' => 'integer',
+        'tutor_capacity' => 'integer',
     ];
 
     /**

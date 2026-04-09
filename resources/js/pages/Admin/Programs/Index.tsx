@@ -38,6 +38,7 @@ interface Program {
     available_slots?: number;
     description?: string;
     setting?: string;
+    tutor_capacity?: number; // Add tutor_capacity
 }
 
 interface ProgramsPageProps {
@@ -398,6 +399,12 @@ export default function Programs({ programs }: ProgramsPageProps) {
                                                         </div>
                                                     </div>
                                                 )}
+                                            </div>
+
+                                            {/* Tutor Capacity */}
+                                            <div className="flex items-center gap-2">
+                                                <Users className="h-4 w-4 text-gray-500" />
+                                                <span className="text-sm font-medium">{program.tutor_capacity ?? 'N/A'} tutors</span>
                                             </div>
 
                                             {/* Description Preview */}

@@ -44,7 +44,8 @@ export type BookingRow = {
     parent_id: number;
     learner_id: string;
     prog_id: string;
-    tutor_id: string | null;
+    tutor_ids?: string[];
+    tutors?: { tutor_id: string; name: string }[];
     book_date: string;
     session_count: number;
     status: 'pending' | 'approved' | 'declined';
@@ -73,11 +74,6 @@ export type BookingRow = {
         prog_id: string;
         name: string;
         prog_type: string;
-    };
-    tutor?: {
-        tutor_id: string;
-        first_name: string;
-        last_name: string;
     };
 };
 
@@ -170,7 +166,7 @@ function ActionCell({ booking, tutors }: { booking: BookingRow; tutors: Tutor[] 
     const [declineDialog, setDeclineDialog] = useState(false);
     const [detailsDialog, setDetailsDialog] = useState(false);
     const [statusDialog, setStatusDialog] = useState(false);
-    const [selectedBookingStatus, setSelectedBookingStatus] = useState(booking.booking_status);
+    const [selectedBookingStatus, setSelectedBookingStatus] = useState<BookingRow['booking_status']>(booking.booking_status);
     const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
     const handleApprove = () => {
@@ -205,7 +201,7 @@ function ActionCell({ booking, tutors }: { booking: BookingRow; tutors: Tutor[] 
     };
 
     const handleUpdateBookingStatus = (newStatus: string) => {
-        setSelectedBookingStatus(newStatus);
+        setSelectedBookingStatus(newStatus as BookingRow['booking_status']);
         setStatusDialog(true);
     };
 
@@ -386,7 +382,7 @@ function DeclineAlertDialog({
                 </AlertDialogHeader>
                 <div className="py-4">
                     <textarea
-                        className="min-h-[100px] w-full rounded-md border border-gray-300 p-3 text-sm focus:border-amber-300 focus:ring-2 focus:ring-amber-200 focus:outline-none"
+                        className="min-h-25 w-full rounded-md border border-gray-300 p-3 text-sm focus:border-amber-300 focus:ring-2 focus:ring-amber-200 focus:outline-none"
                         placeholder="Enter reason for declining..."
                         value={reason}
                         onChange={(e) => setReason(e.target.value)}
@@ -523,7 +519,6 @@ function DetailsDialog({ open, onOpenChange, booking, tutors }: { open: boolean;
             'pre-kinder': 'Pre-Kinder',
             'after-school-academic-tutorial': 'After School',
             'special-tutorial': 'Special Tutorial',
-            'art-class': 'Art Class',
             'reading-writing': 'Reading & Writing',
             'weekend-academic-tutorial': 'Weekend Tutorial',
         };
@@ -728,6 +723,7 @@ function DetailsDialog({ open, onOpenChange, booking, tutors }: { open: boolean;
                             <BookOpen className="h-4 w-4 text-amber-500" />
                             Program Details
                         </h4>
+
                         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                             <div>
                                 <p className="text-xs text-gray-500">Program Name</p>
@@ -744,9 +740,18 @@ function DetailsDialog({ open, onOpenChange, booking, tutors }: { open: boolean;
                                 <p className="font-medium text-gray-900">{booking.prog_id}</p>
                             </div>
                             <div>
-                                <p className="text-xs text-gray-500">Assigned Tutor</p>
-                                {booking.tutor ? (
-                                    <p className="font-medium text-gray-900">{booking.tutor.name}</p>
+                                <p className="text-xs text-gray-500">Assigned Tutor(s)</p>
+                                {Array.isArray(booking.tutor_ids) && booking.tutor_ids.length > 0 ? (
+                                    <ul className="list-disc ml-4">
+                                        {booking.tutor_ids.map((tutor_id: string) => {
+                                            const tutor = tutors.find((t) => t.tutor_id === tutor_id);
+                                            return (
+                                                <li key={tutor_id} className="font-medium text-gray-900">
+                                                    {tutor ? tutor.name : 'N/A'}
+                                                </li>
+                                            );
+                                        })}
+                                    </ul>
                                 ) : (
                                     <p className="text-sm text-gray-500">No tutor assigned</p>
                                 )}
@@ -754,7 +759,7 @@ function DetailsDialog({ open, onOpenChange, booking, tutors }: { open: boolean;
                         </div>
 
                         {/* Tutor Assignment Section */}
-                        {!booking.tutor && tutors.length > 0 && (
+                        {(!booking.tutors || booking.tutors.length === 0) && tutors.length > 0 && (
                             <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3">
                                 <p className="mb-2 text-xs font-medium text-amber-700">Assign a Tutor</p>
                                 <div className="flex gap-2">
@@ -858,16 +863,28 @@ function DetailsDialog({ open, onOpenChange, booking, tutors }: { open: boolean;
         </AlertDialog>
     );
 }
+
 export const columns: ColumnDef<BookingRow>[] = [
     {
         accessorKey: 'book_id',
         header: 'Booking ID',
-        cell: ({ row }) => <span className="font-mono text-xs">{row.getValue('book_id')}</span>,
+        cell: ({ row }: { row: any }) => <span className="font-mono text-xs">{row.getValue('book_id')}</span>,
+    },
+    {
+        accessorKey: 'tutor_ids',
+        header: 'Tutor IDs',
+        cell: ({ row }: { row: any }) => {
+            const ids = row.original.tutor_ids;
+            if (!ids || ids.length === 0) return <span className="text-gray-400">None</span>;
+            return <span className="font-mono text-xs">{ids.join(', ')}</span>;
+        },
+        enableSorting: false,
+        size: 180,
     },
     {
         accessorKey: 'learner',
         header: 'Learner',
-        cell: ({ row }) => {
+        cell: ({ row }: { row: any }) => {
             const learner = row.original.learner;
             const displayName = learner?.nickname ? `${learner.name} (${learner.nickname})` : learner?.name || 'N/A';
 
@@ -894,7 +911,7 @@ export const columns: ColumnDef<BookingRow>[] = [
     {
         accessorKey: 'program',
         header: 'Program',
-        cell: ({ row }) => {
+        cell: ({ row }: { row: any }) => {
             const program = row.original.program;
             return program ? (
                 <div>
@@ -909,7 +926,7 @@ export const columns: ColumnDef<BookingRow>[] = [
     {
         accessorKey: 'parent',
         header: 'Parent',
-        cell: ({ row }) => {
+        cell: ({ row }: { row: any }) => {
             const parent = row.original.parent;
             return parent ? (
                 <div>
@@ -924,23 +941,22 @@ export const columns: ColumnDef<BookingRow>[] = [
     {
         accessorKey: 'book_date',
         header: 'Date',
-        cell: ({ row }) => (
+        cell: ({ row }: { row: any }) => (
             <div className="flex items-center gap-1">
                 <Calendar className="h-3 w-3 text-gray-400" />
                 {formatDate(row.getValue('book_date'))}
             </div>
         ),
     },
-
     {
         accessorKey: 'status',
         header: 'Admin Status',
-        cell: ({ row }) => <StatusBadge status={row.getValue('status')} />,
+        cell: ({ row }: { row: any }) => <StatusBadge status={row.getValue('status')} />,
     },
     {
         accessorKey: 'booking_status',
         header: 'Booking Status',
-        cell: ({ row }) => <BookingStatusBadge status={row.getValue('booking_status')} />,
+        cell: ({ row }: { row: any }) => <BookingStatusBadge status={row.getValue('booking_status')} />,
     },
 ];
 

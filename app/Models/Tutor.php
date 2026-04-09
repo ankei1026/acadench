@@ -221,4 +221,22 @@ class Tutor extends Model
     {
         return $this->hasMany(Booking::class, 'tutor_id', 'tutor_id');
     }
+
+    /**
+     * The sessions this tutor is assigned to.
+     */
+    public function sessions()
+    {
+        return $this->belongsToMany(BookingSession::class, 'booking_session_tutor', 'tutor_id', 'session_id');
+    }
+
+    public function payrolls(): HasMany
+    {
+        return $this->hasMany(Payroll::class, 'tutor_id', 'tutor_id');
+    }
+
+    public function substitutePayrolls(): HasMany
+    {
+        return $this->hasMany(Payroll::class, 'original_tutor_id', 'tutor_id');
+    }
 }

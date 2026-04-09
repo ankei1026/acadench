@@ -8,6 +8,7 @@ use App\Http\Controllers\AdminParentController;
 use App\Http\Controllers\AdminProgramsController;
 use App\Http\Controllers\AdminRefundRequestController;
 use App\Http\Controllers\AdminRevenueController;
+use App\Http\Controllers\AdminSessionController;
 use App\Http\Controllers\AdminTutorApplicationController;
 use App\Http\Controllers\AdminTutorController;
 use App\Http\Controllers\LoginController;
@@ -21,7 +22,9 @@ use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\RefundRequestController;
 use App\Http\Controllers\SignupController;
 use App\Http\Controllers\TutorApplicationController;
+use App\Http\Controllers\TutorPayrollController;
 use App\Http\Controllers\TutorController;
+use App\Http\Controllers\AdminPayrollController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -152,6 +155,14 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {
     // Generate secure password
     Route::get('/generate-password', [PasswordResetController::class, 'generate'])
         ->name('admin.generate-password');
+
+    Route::post('/sessions/substitute-tutor', [AdminSessionController::class, 'substituteTutor'])
+        ->name('admin.sessions.substitute-tutor');
+
+    Route::post('/sessions/update-status', [AdminSessionController::class, 'updateStatus'])
+        ->name('admin.sessions.update-status');
+
+    Route::get('/payroll', [AdminPayrollController::class, 'index'])->name('payroll.index');
 });
 
 // Self password update (for any authenticated user)
@@ -176,6 +187,12 @@ Route::middleware(['auth', 'role:tutor'])->prefix('tutor')->group(function () {
     Route::patch('/lectures/{lecture}', [TutorController::class, 'updateLecture'])->name('tutor.lectures.update');
     Route::get('/profile', [TutorController::class, 'profile'])->name('tutor.profile');
     Route::put('/profile', [TutorController::class, 'updateProfile'])->name('tutor.profile.update');
+
+    Route::post('/sessions/update-status', [TutorController::class, 'updateSessionStatus'])
+        ->name('sessions.update-status');
+
+    Route::get('/payroll', [TutorPayrollController::class, 'index'])->name('payroll.index');
+    Route::get('/payroll/{payroll}', [TutorPayrollController::class, 'show'])->name('payroll.show');
 });
 
 // Add this temporarily in routes/web.php

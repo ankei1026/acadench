@@ -173,6 +173,7 @@ class ParentBookProgramController extends Controller
             'price' => $program->price,
             'session_count' => $program->session_count,
             'setting' => $program->setting,
+            'tutor_capacity' => $program->tutor_capacity,
             'dynamic_pricing' => $defaultPriceData ? [
                 'base_price' => $defaultPriceData['base_price'],
                 'final_price' => $defaultPriceData['final_price'],
@@ -231,13 +232,15 @@ class ParentBookProgramController extends Controller
             'session_count' => ['required', 'integer', 'min:1'],
             'notes' => ['nullable', 'string'],
             'request_tutor' => ['boolean'],
-            'tutor_id' => ['nullable', 'string', Rule::exists('tutors', 'tutor_id')],
+            'tutor_ids' => ['nullable', 'array'],
+            'tutor_ids.*' => ['string', Rule::exists('tutors', 'tutor_id')],
             'amount' => ['required', 'numeric', 'min:0'],
             // Downpayment fields (required)
             'downpayment_amount' => ['required', 'numeric', 'min:500'],
             'payment_type_id' => ['required', 'exists:payment_types,id'],
             'receipt_image' => ['nullable', 'image', 'max:5120'],
         ]);
+
 
         $program = Program::where('prog_id', $validated['prog_id'])->firstOrFail();
         $learner = Learner::where('learner_id', $validated['learner_id'])
@@ -274,9 +277,15 @@ class ParentBookProgramController extends Controller
             ])->withInput();
         }
 
-        $tutorId = null;
-        if (! empty($validated['request_tutor']) && ! empty($validated['tutor_id'])) {
-            $tutorId = $validated['tutor_id'];
+        $tutorIds = [];
+        if (!empty($validated['request_tutor']) && !empty($validated['tutor_ids'])) {
+            $tutorIds = $validated['tutor_ids'];
+            // Enforce tutor_capacity limit
+            if ($program->tutor_capacity && count($tutorIds) > $program->tutor_capacity) {
+                return redirect()->back()->withErrors([
+                    'tutor_ids' => 'You can only select up to ' . $program->tutor_capacity . ' tutor(s) for this program.'
+                ])->withInput();
+            }
         }
 
         // Determine payment status based on downpayment
@@ -287,7 +296,7 @@ class ParentBookProgramController extends Controller
             'parent_id' => Auth::id(),
             'learner_id' => $learner->learner_id,
             'prog_id' => $program->prog_id,
-            'tutor_id' => $tutorId,
+            'tutor_ids' => $tutorIds ? json_encode($tutorIds) : null,
             'book_date' => $validated['book_date'],
             'session_count' => $validated['session_count'],
             'notes' => $validated['notes'] ?? null,
@@ -352,7 +361,7 @@ class ParentBookProgramController extends Controller
 
     public function bookings()
     {
-        $bookings = Booking::with(['program', 'learner', 'tutor.user', 'receipts'])
+        $bookings = Booking::with(['program', 'learner', 'tutors.user', 'receipts'])
             ->where('parent_id', Auth::id())
             ->orderBy('created_at', 'desc')
             ->get()
@@ -389,7 +398,7 @@ class ParentBookProgramController extends Controller
                         'nickname' => $booking->learner->nickname,
                         'photo' => $booking->learner->photo ? asset('storage/' . $booking->learner->photo) : null,
                     ] : null,
-                    'tutor' => $booking->tutor?->user?->name ?? $booking->tutor?->tutor_id,
+                    'tutor' => optional($booking->tutors->first())->user?->name ?? optional($booking->tutors->first())->tutor_id ?? null,
                     'book_date' => $booking->book_date?->format('Y-m-d'),
                     'session_count' => $booking->session_count,
                     'amount' => $booking->amount,

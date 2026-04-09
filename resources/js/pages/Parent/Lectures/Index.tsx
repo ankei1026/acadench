@@ -73,16 +73,16 @@ const formatTime12Hour = (time: string | null): string => {
 const formatDays = (days: string[] | string | null): string => {
     if (!days) return '';
     const dayMap: Record<string, string> = {
-        'Mon': 'Monday',
-        'Tue': 'Tuesday',
-        'Wed': 'Wednesday',
-        'Thu': 'Thursday',
-        'Fri': 'Friday',
-        'Sat': 'Saturday',
-        'Sun': 'Sunday',
+        Mon: 'Monday',
+        Tue: 'Tuesday',
+        Wed: 'Wednesday',
+        Thu: 'Thursday',
+        Fri: 'Friday',
+        Sat: 'Saturday',
+        Sun: 'Sunday',
     };
     const dayArray = Array.isArray(days) ? days : [days];
-    return dayArray.map(day => dayMap[day] || day).join(', ');
+    return dayArray.map((day) => dayMap[day] || day).join(', ');
 };
 
 export default function Lectures({ lectures }: LecturesPageProps) {
@@ -102,9 +102,7 @@ export default function Lectures({ lectures }: LecturesPageProps) {
                                     My Lectures
                                 </h1>
                             </div>
-                            <p className="ml-2 text-gray-600">
-                                View your online class lectures and meeting links
-                            </p>
+                            <p className="ml-2 text-gray-600">View your online class lectures and meeting links</p>
                         </div>
                     </div>
                 </div>
@@ -127,9 +125,7 @@ export default function Lectures({ lectures }: LecturesPageProps) {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-blue-700">Google Meet</p>
-                                <p className="text-2xl font-bold text-gray-900">
-                                    {lectures.filter(l => l.platform === 'Google Meet').length}
-                                </p>
+                                <p className="text-2xl font-bold text-gray-900">{lectures.filter((l) => l.platform === 'Google Meet').length}</p>
                             </div>
                             <div className="rounded-lg bg-gradient-to-r from-blue-500 to-cyan-500 p-2.5">
                                 <Video className="h-5 w-5 text-white" />
@@ -157,20 +153,21 @@ export default function Lectures({ lectures }: LecturesPageProps) {
                             const endDate = calculateEndDate(lecture.booking?.book_date ?? null, lecture.booking?.session_count ?? 0);
 
                             return (
-                                <Card key={lecture.lecture_id} className="border-amber-200 bg-white shadow-md hover:shadow-lg transition-all">
+                                <Card key={lecture.lecture_id} className="border-amber-200 bg-white shadow-md transition-all hover:shadow-lg">
                                     <CardHeader className="pb-3">
                                         <div className="flex items-start justify-between">
                                             <div className="flex items-center gap-3">
                                                 <Avatar className="h-12 w-12">
-                                                    <AvatarImage src={lecture.booking?.learner?.photo || undefined} alt={lecture.booking?.learner?.name} />
+                                                    <AvatarImage
+                                                        src={lecture.booking?.learner?.photo || undefined}
+                                                        alt={lecture.booking?.learner?.name}
+                                                    />
                                                     <AvatarFallback className="bg-gradient-to-r from-amber-500 to-orange-500 text-white">
                                                         {lecture.booking?.learner?.name?.charAt(0).toUpperCase() || 'L'}
                                                     </AvatarFallback>
                                                 </Avatar>
                                                 <div>
-                                                    <CardTitle className="text-lg font-semibold text-gray-900">
-                                                        {lecture.name}
-                                                    </CardTitle>
+                                                    <CardTitle className="text-lg font-semibold text-gray-900">{lecture.name}</CardTitle>
                                                     <p className="text-sm text-gray-500">
                                                         {lecture.booking?.learner?.nickname
                                                             ? `${lecture.booking.learner.name} (${lecture.booking.learner.nickname})`
@@ -203,7 +200,9 @@ export default function Lectures({ lectures }: LecturesPageProps) {
                                         <div className="flex items-center gap-2 text-sm">
                                             <Clock className="h-4 w-4 text-amber-500" />
                                             <span className="text-gray-600">Sessions:</span>
-                                            <span className="font-medium text-gray-900">{lecture.booking?.session_count || lecture.program?.session_count || 0}</span>
+                                            <span className="font-medium text-gray-900">
+                                                {lecture.booking?.session_count || lecture.program?.session_count || 0}
+                                            </span>
                                         </div>
 
                                         {/* Time */}
@@ -222,31 +221,14 @@ export default function Lectures({ lectures }: LecturesPageProps) {
                                             <div className="flex items-center gap-2 text-sm">
                                                 <Calendar className="h-4 w-4 text-indigo-500" />
                                                 <span className="text-gray-600">Days:</span>
-                                                <span className="font-medium text-gray-900">
-                                                    {formatDays(lecture.program.days)}
-                                                </span>
-                                            </div>
-                                        )}
-
-                                        {/* Tutor */}
-                                        {lecture.booking?.tutor ? (
-                                            <div className="flex items-center gap-2 text-sm">
-                                                <User className="h-4 w-4 text-purple-500" />
-                                                <span className="text-gray-600">Tutor:</span>
-                                                <span className="font-medium text-gray-900">{lecture.booking.tutor.name}</span>
-                                            </div>
-                                        ) : (
-                                            <div className="flex items-center gap-2 text-sm">
-                                                <User className="h-4 w-4 text-gray-300" />
-                                                <span className="text-gray-600">Tutor:</span>
-                                                <span className="text-gray-400">Not assigned</span>
+                                                <span className="font-medium text-gray-900">{formatDays(lecture.program.days)}</span>
                                             </div>
                                         )}
 
                                         {/* Notes */}
                                         {lecture.booking?.notes && (
                                             <div className="flex items-start gap-2 text-sm">
-                                                <FileText className="h-4 w-4 text-gray-400 mt-0.5" />
+                                                <FileText className="mt-0.5 h-4 w-4 text-gray-400" />
                                                 <div>
                                                     <span className="text-gray-600">Notes:</span>
                                                     <p className="text-gray-900">{lecture.booking.notes}</p>
@@ -286,9 +268,7 @@ export default function Lectures({ lectures }: LecturesPageProps) {
                             <Video className="h-8 w-8 text-amber-500" />
                         </div>
                         <h3 className="mt-4 text-lg font-semibold text-gray-900">No Lectures Yet</h3>
-                        <p className="mt-2 text-center text-gray-600">
-                            Lectures will appear here once you complete payment for online programs.
-                        </p>
+                        <p className="mt-2 text-center text-gray-600">Lectures will appear here once you complete payment for online programs.</p>
                     </div>
                 )}
             </div>

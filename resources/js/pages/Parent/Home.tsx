@@ -14,10 +14,15 @@ import {
     PlayCircle,
     UserCircle,
     Clock,
+    Users,
+    CheckCircle,
+    XCircle,
+    Clock3,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 // FullCalendar
 import FullCalendar from '@fullcalendar/react';
@@ -39,14 +44,18 @@ interface CalendarEvent {
     end?: string;
     allDay: boolean;
     extendedProps: {
+        session_id?: string;
         booking_id?: string;
         session_number?: number;
         total_sessions?: number;
         learner?: string | null;
         tutor?: string | null;
+        tutor_count?: number;
         program?: string | null;
         start_time?: string | null;
         end_time?: string | null;
+        status?: string;
+        notes?: string | null;
     };
 }
 
@@ -73,6 +82,48 @@ export default function Home({ calendarEvents = [], stats }: ParentHomeProps) {
         const timer = setInterval(() => setCurrentTime(new Date()), 60000);
         return () => clearInterval(timer);
     }, []);
+
+    // Get status badge variant
+    const getStatusBadgeClass = (status: string) => {
+        switch (status) {
+            case 'completed':
+                return 'bg-green-100 text-green-700 border-green-200';
+            case 'ongoing':
+                return 'bg-blue-100 text-blue-700 border-blue-200';
+            case 'cancelled':
+                return 'bg-red-100 text-red-700 border-red-200';
+            default:
+                return 'bg-amber-100 text-amber-700 border-amber-200';
+        }
+    };
+
+    // Get status icon
+    const getStatusIcon = (status: string) => {
+        switch (status) {
+            case 'completed':
+                return <CheckCircle className="h-4 w-4 text-green-600" />;
+            case 'ongoing':
+                return <Clock3 className="h-4 w-4 text-blue-600" />;
+            case 'cancelled':
+                return <XCircle className="h-4 w-4 text-red-600" />;
+            default:
+                return <Clock3 className="h-4 w-4 text-amber-600" />;
+        }
+    };
+
+    // Get calendar event gradient colors based on status
+    const getEventGradient = (status: string) => {
+        switch (status) {
+            case 'completed':
+                return 'from-green-500 to-emerald-500';
+            case 'ongoing':
+                return 'from-blue-500 to-cyan-500';
+            case 'cancelled':
+                return 'from-red-500 to-rose-500';
+            default:
+                return 'from-orange-500 to-amber-500';
+        }
+    };
 
     // Get today's events
     const today = new Date();
@@ -108,14 +159,14 @@ export default function Home({ calendarEvents = [], stats }: ParentHomeProps) {
 
             <div className="flex h-full flex-1 flex-col gap-6 p-6">
                 {/* Hero Header */}
-                <div className="rounded-xl border border-orange-200 bg-linear-to-r from-orange-500/10 via-amber-500/10 to-orange-500/10 p-6 backdrop-blur-sm">
+                <div className="rounded-xl border border-orange-200 bg-gradient-to-r from-orange-500/10 via-amber-500/10 to-orange-500/10 p-6 backdrop-blur-sm">
                     <div className="flex items-start justify-between">
                         <div className="flex flex-col gap-2">
                             <div className="flex items-center gap-3">
-                                <div className="rounded-full bg-linear-to-r from-orange-500 to-amber-500 p-3 shadow-md">
+                                <div className="rounded-full bg-gradient-to-r from-orange-500 to-amber-500 p-3 shadow-md">
                                     <BookOpen className="h-6 w-6 text-white" />
                                 </div>
-                                <h1 className="bg-linear-to-r from-orange-700 to-amber-700 bg-clip-text text-3xl font-bold text-transparent">
+                                <h1 className="bg-gradient-to-r from-orange-700 to-amber-700 bg-clip-text text-3xl font-bold text-transparent">
                                     Parent Dashboard
                                 </h1>
                             </div>
@@ -136,14 +187,14 @@ export default function Home({ calendarEvents = [], stats }: ParentHomeProps) {
                 </div>
 
                 {/* Stats Grid */}
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    <div className="rounded-xl border border-orange-100 bg-linear-to-br from-orange-50 to-amber-50 p-4 shadow-sm">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="rounded-xl border border-orange-100 bg-gradient-to-br from-orange-50 to-amber-50 p-4 shadow-sm">
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-orange-700">Active Bookings</p>
                                 <p className="text-2xl font-bold text-gray-900">{stats.activeBookings}</p>
                             </div>
-                            <div className="rounded-lg bg-linear-to-r from-orange-500 to-amber-500 p-2.5">
+                            <div className="rounded-lg bg-gradient-to-r from-orange-500 to-amber-500 p-2.5">
                                 <CalendarDays className="h-5 w-5 text-white" />
                             </div>
                         </div>
@@ -153,13 +204,13 @@ export default function Home({ calendarEvents = [], stats }: ParentHomeProps) {
                         </div>
                     </div>
 
-                    <div className="rounded-xl border border-yellow-100 bg-linear-to-br from-yellow-50 to-amber-50 p-4 shadow-sm">
+                    <div className="rounded-xl border border-yellow-100 bg-gradient-to-br from-yellow-50 to-amber-50 p-4 shadow-sm">
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-yellow-700">Total Learners</p>
                                 <p className="text-2xl font-bold text-gray-900">{stats.totalLearners}</p>
                             </div>
-                            <div className="rounded-lg bg-linear-to-r from-yellow-500 to-amber-500 p-2.5">
+                            <div className="rounded-lg bg-gradient-to-r from-yellow-500 to-amber-500 p-2.5">
                                 <User className="h-5 w-5 text-white" />
                             </div>
                         </div>
@@ -169,13 +220,29 @@ export default function Home({ calendarEvents = [], stats }: ParentHomeProps) {
                         </div>
                     </div>
 
-                    <div className="rounded-xl border border-orange-100 bg-linear-to-br from-orange-50 to-amber-50 p-4 shadow-sm">
+                    <div className="rounded-xl border border-orange-100 bg-gradient-to-br from-orange-50 to-amber-50 p-4 shadow-sm">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-orange-700">Active Tutors</p>
+                                <p className="text-2xl font-bold text-gray-900">{stats.activeTutors}</p>
+                            </div>
+                            <div className="rounded-lg bg-gradient-to-r from-orange-500 to-amber-500 p-2.5">
+                                <Users className="h-5 w-5 text-white" />
+                            </div>
+                        </div>
+                        <div className="mt-2 flex items-center gap-1 text-xs text-orange-600">
+                            <Users className="h-3 w-3" />
+                            <span>{stats.activeTutors} tutors</span>
+                        </div>
+                    </div>
+
+                    <div className="rounded-xl border border-orange-100 bg-gradient-to-br from-orange-50 to-amber-50 p-4 shadow-sm">
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-orange-700">Total Sessions</p>
                                 <p className="text-2xl font-bold text-gray-900">{stats.totalSessions}</p>
                             </div>
-                            <div className="rounded-lg bg-linear-to-r from-orange-500 to-amber-500 p-2.5">
+                            <div className="rounded-lg bg-gradient-to-r from-orange-500 to-amber-500 p-2.5">
                                 <Target className="h-5 w-5 text-white" />
                             </div>
                         </div>
@@ -191,11 +258,11 @@ export default function Home({ calendarEvents = [], stats }: ParentHomeProps) {
                     <Card className="border border-orange-200">
                         <CardContent className="p-4">
                             <div className="flex items-center gap-2">
-                                <div className="rounded-full bg-linear-to-r from-orange-500 to-amber-500 p-2">
+                                <div className="rounded-full bg-gradient-to-r from-orange-500 to-amber-500 p-2">
                                     <Clock className="h-4 w-4 text-white" />
                                 </div>
                                 <h3 className="font-semibold text-orange-800">Today's Schedule</h3>
-                                <Badge className="border-0 bg-linear-to-r from-orange-500 to-amber-500 text-white">
+                                <Badge className="border-0 bg-gradient-to-r from-orange-500 to-amber-500 text-white">
                                     {todaysEvents.length} sessions
                                 </Badge>
                             </div>
@@ -203,32 +270,50 @@ export default function Home({ calendarEvents = [], stats }: ParentHomeProps) {
                                 {todaysEvents.slice(0, 3).map((event) => (
                                     <div
                                         key={event.id}
-                                        className="min-w-62.5 cursor-pointer rounded-lg border border-orange-200 bg-white p-3 shadow-sm transition-all hover:shadow-md"
+                                        className="min-w-[250px] cursor-pointer rounded-lg border border-orange-200 bg-white p-3 shadow-sm transition-all hover:shadow-md"
                                         onClick={() => setSelectedEvent(event)}
                                     >
-                                        <div className="font-semibold text-gray-900">{event.title}</div>
-                                        <div className="mt-1 text-xs text-gray-600">
-                                            Session {event.extendedProps.session_number} of {event.extendedProps.total_sessions}
+                                        <div className="flex items-center justify-between">
+                                            <p className="font-medium text-gray-900">{event.title}</p>
+                                            <Badge className={getStatusBadgeClass(event.extendedProps.status || 'pending')}>
+                                                {event.extendedProps.session_number}/{event.extendedProps.total_sessions}
+                                            </Badge>
                                         </div>
-                                        {event.extendedProps.learner && (
-                                            <div className="mt-1 text-xs text-gray-700">
-                                                <strong>Learner:</strong> {event.extendedProps.learner}
-                                            </div>
-                                        )}
-                                        {event.extendedProps.tutor && (
-                                            <div className="mt-1 text-xs text-gray-700">
-                                                <strong>Tutor:</strong> {event.extendedProps.tutor}
-                                            </div>
-                                        )}
+                                        <p className="mt-1 text-xs text-gray-600">
+                                            <span className="font-medium">Learner:</span> {event.extendedProps.learner || 'TBA'}
+                                        </p>
+                                        <div className="text-xs text-gray-600">
+                                            <span className="font-medium">
+                                                Tutor{event.extendedProps.tutor_count && event.extendedProps.tutor_count > 1 ? 's' : ''}:
+                                            </span>{' '}
+                                            {event.extendedProps.tutor_count && event.extendedProps.tutor_count > 1 ? (
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <span className="inline-flex cursor-help items-center gap-1">
+                                                                <Users className="h-3 w-3" />
+                                                                {event.extendedProps.tutor_count} tutors
+                                                            </span>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            <p>{event.extendedProps.tutor}</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                            ) : (
+                                                event.extendedProps.tutor || 'Not assigned'
+                                            )}
+                                        </div>
                                         {event.extendedProps.start_time && (
-                                            <div className="mt-1 text-xs text-orange-600">
+                                            <p className="mt-1 text-xs text-gray-600">
+                                                <Clock className="mr-1 inline h-3 w-3" />
                                                 {event.extendedProps.start_time} - {event.extendedProps.end_time}
-                                            </div>
+                                            </p>
                                         )}
                                     </div>
                                 ))}
                                 {todaysEvents.length > 3 && (
-                                    <div className="flex min-w-15 items-center justify-center">
+                                    <div className="flex min-w-[60px] items-center justify-center">
                                         <span className="text-xs text-gray-500">+{todaysEvents.length - 3} more</span>
                                     </div>
                                 )}
@@ -253,11 +338,11 @@ export default function Home({ calendarEvents = [], stats }: ParentHomeProps) {
                                             variant={calendarView === 'dayGridMonth' ? 'default' : 'ghost'}
                                             size="sm"
                                             onClick={() => handleViewChange('dayGridMonth')}
-                                            className={
+                                            className={`text-xs ${
                                                 calendarView === 'dayGridMonth'
-                                                    ? 'bg-orange-500 text-white hover:bg-orange-600'
+                                                    ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white'
                                                     : 'text-gray-600 hover:bg-orange-50'
-                                            }
+                                            }`}
                                         >
                                             Month
                                         </Button>
@@ -265,11 +350,11 @@ export default function Home({ calendarEvents = [], stats }: ParentHomeProps) {
                                             variant={calendarView === 'timeGridWeek' ? 'default' : 'ghost'}
                                             size="sm"
                                             onClick={() => handleViewChange('timeGridWeek')}
-                                            className={
+                                            className={`text-xs ${
                                                 calendarView === 'timeGridWeek'
-                                                    ? 'bg-orange-500 text-white hover:bg-orange-600'
+                                                    ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white'
                                                     : 'text-gray-600 hover:bg-orange-50'
-                                            }
+                                            }`}
                                         >
                                             Week
                                         </Button>
@@ -277,11 +362,11 @@ export default function Home({ calendarEvents = [], stats }: ParentHomeProps) {
                                             variant={calendarView === 'timeGridDay' ? 'default' : 'ghost'}
                                             size="sm"
                                             onClick={() => handleViewChange('timeGridDay')}
-                                            className={
+                                            className={`text-xs ${
                                                 calendarView === 'timeGridDay'
-                                                    ? 'bg-orange-500 text-white hover:bg-orange-600'
+                                                    ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white'
                                                     : 'text-gray-600 hover:bg-orange-50'
-                                            }
+                                            }`}
                                         >
                                             Day
                                         </Button>
@@ -305,15 +390,40 @@ export default function Home({ calendarEvents = [], stats }: ParentHomeProps) {
                                     }}
                                     height="auto"
                                     dayMaxEvents={3}
+                                    slotMinTime="06:00:00"
+                                    slotMaxTime="22:00:00"
+                                    allDaySlot={false}
+                                    eventTimeFormat={{
+                                        hour: '2-digit',
+                                        minute: '2-digit',
+                                        meridiem: 'short',
+                                    }}
                                     eventClassNames="cursor-pointer hover:opacity-90 transition-opacity"
                                     eventContent={(eventInfo) => {
-                                        const sessionNum = eventInfo.event.extendedProps?.session_number;
-                                        const totalSessions = eventInfo.event.extendedProps?.total_sessions;
+                                        const props = eventInfo.event.extendedProps;
+                                        const sessionNum = props.session_number;
+                                        const totalSessions = props.total_sessions;
+                                        const startTime = props.start_time;
+                                        const tutorCount = props.tutor_count || 0;
+                                        const status = props.status || 'pending';
+
                                         return (
-                                            <div className="flex items-center gap-1 overflow-hidden rounded bg-linear-to-r from-orange-500 to-amber-500 p-1 text-xs text-white shadow-sm">
-                                                <span className="truncate">{eventInfo.event.title}</span>
-                                                {eventInfo.view.type !== 'dayGridMonth' && sessionNum && totalSessions && (
-                                                    <span className="ml-1 shrink-0 rounded bg-white/20 px-1 py-0.5 text-xs font-semibold">
+                                            <div className={`flex flex-col overflow-hidden rounded bg-gradient-to-r ${getEventGradient(status)} p-1 text-xs text-white shadow-sm`}>
+                                                <div className="flex items-center gap-1">
+                                                    <span className="truncate font-medium">{eventInfo.event.title}</span>
+                                                    {tutorCount > 1 && (
+                                                        <Badge className="ml-auto border-0 bg-white/20 px-1 py-0 text-[8px]">{tutorCount}</Badge>
+                                                    )}
+                                                </div>
+                                                {eventInfo.view.type === 'timeGridWeek' || eventInfo.view.type === 'timeGridDay' ? (
+                                                    <>
+                                                        <span className="text-[10px] opacity-90">
+                                                            {startTime} • Session {sessionNum}/{totalSessions}
+                                                        </span>
+                                                        <span className="truncate text-[10px] opacity-80">{props.learner}</span>
+                                                    </>
+                                                ) : (
+                                                    <span className="text-[10px] opacity-90">
                                                         {sessionNum}/{totalSessions}
                                                     </span>
                                                 )}
@@ -342,7 +452,7 @@ export default function Home({ calendarEvents = [], stats }: ParentHomeProps) {
                                             <div className="rounded-lg border border-orange-200 p-4">
                                                 <div className="mb-2 flex items-center justify-between">
                                                     <h4 className="font-semibold text-gray-900">{selectedEvent.title}</h4>
-                                                    <Badge className="border-0 bg-linear-to-r from-orange-500 to-amber-500 text-white">
+                                                    <Badge className="border-0 bg-gradient-to-r from-orange-500 to-amber-500 text-white">
                                                         Session {selectedEvent.extendedProps.session_number}/
                                                         {selectedEvent.extendedProps.total_sessions}
                                                     </Badge>
@@ -350,8 +460,9 @@ export default function Home({ calendarEvents = [], stats }: ParentHomeProps) {
                                                 <p className="flex items-center gap-1 text-sm text-gray-600">
                                                     <CalendarDays className="h-4 w-4 text-orange-500" />
                                                     {new Date(selectedEvent.start).toLocaleDateString('en-US', {
-                                                        weekday: 'short',
-                                                        month: 'short',
+                                                        weekday: 'long',
+                                                        year: 'numeric',
+                                                        month: 'long',
                                                         day: 'numeric',
                                                     })}
                                                 </p>
@@ -360,6 +471,15 @@ export default function Home({ calendarEvents = [], stats }: ParentHomeProps) {
                                                         <Clock className="h-4 w-4 text-orange-500" />
                                                         {selectedEvent.extendedProps.start_time} - {selectedEvent.extendedProps.end_time}
                                                     </p>
+                                                )}
+                                                {selectedEvent.extendedProps.status && (
+                                                    <div className="mt-2 flex items-center gap-2">
+                                                        {getStatusIcon(selectedEvent.extendedProps.status)}
+                                                        <Badge className={getStatusBadgeClass(selectedEvent.extendedProps.status)}>
+                                                            {selectedEvent.extendedProps.status.charAt(0).toUpperCase() +
+                                                                selectedEvent.extendedProps.status.slice(1)}
+                                                        </Badge>
+                                                    </div>
                                                 )}
                                             </div>
 
@@ -377,12 +497,14 @@ export default function Home({ calendarEvents = [], stats }: ParentHomeProps) {
                                                 )}
 
                                                 {selectedEvent.extendedProps.tutor && (
-                                                    <div className="flex items-center gap-3 rounded-lg border border-orange-100 p-3">
+                                                    <div className="flex items-start gap-3 rounded-lg border border-orange-100 p-3">
                                                         <div className="rounded-full bg-orange-100 p-2">
                                                             <BookOpen className="h-4 w-4 text-orange-600" />
                                                         </div>
-                                                        <div>
-                                                            <p className="text-xs text-gray-500">Tutor</p>
+                                                        <div className="flex-1">
+                                                            <p className="text-xs text-gray-500">
+                                                                Tutor{selectedEvent.extendedProps.tutor_count && selectedEvent.extendedProps.tutor_count > 1 ? 's' : ''}
+                                                            </p>
                                                             <p className="font-medium text-gray-900">{selectedEvent.extendedProps.tutor}</p>
                                                         </div>
                                                     </div>
@@ -399,11 +521,18 @@ export default function Home({ calendarEvents = [], stats }: ParentHomeProps) {
                                                         </div>
                                                     </div>
                                                 )}
+
+                                                {selectedEvent.extendedProps.notes && (
+                                                    <div className="rounded-lg border border-orange-100 bg-orange-50/50 p-3">
+                                                        <p className="text-xs font-medium text-orange-800">Notes</p>
+                                                        <p className="mt-1 text-sm text-gray-700">{selectedEvent.extendedProps.notes}</p>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     ) : (
                                         <div className="flex flex-col items-center justify-center py-8 text-center">
-                                            <div className="rounded-full bg-linear-to-r from-orange-100 to-amber-100 p-4">
+                                            <div className="rounded-full bg-gradient-to-r from-orange-100 to-amber-100 p-4">
                                                 <CalendarDays className="h-8 w-8 text-orange-500" />
                                             </div>
                                             <p className="mt-3 text-sm text-gray-500">Click on any session in the calendar to view details</p>
@@ -422,38 +551,61 @@ export default function Home({ calendarEvents = [], stats }: ParentHomeProps) {
                                 </CardHeader>
                                 <CardContent className="p-4">
                                     {upcomingEvents.length > 0 ? (
-                                        <div className="space-y-2">
+                                        <div className="max-h-[300px] space-y-2 overflow-y-auto">
                                             {upcomingEvents.slice(0, 5).map((event) => (
                                                 <div
                                                     key={event.id}
                                                     onClick={() => setSelectedEvent(event)}
-                                                    className="cursor-pointer rounded-lg border border-orange-100 bg-orange-50 p-2 transition-colors hover:bg-orange-100"
+                                                    className="cursor-pointer rounded-lg border p-3 transition-all hover:shadow-md"
+                                                    style={{
+                                                        borderColor: event.extendedProps.status === 'completed' ? '#bbf7d0' :
+                                                                   event.extendedProps.status === 'ongoing' ? '#bfdbfe' :
+                                                                   event.extendedProps.status === 'cancelled' ? '#fecaca' : '#fde68a',
+                                                        backgroundColor: event.extendedProps.status === 'completed' ? '#f0fdf4' :
+                                                                       event.extendedProps.status === 'ongoing' ? '#eff6ff' :
+                                                                       event.extendedProps.status === 'cancelled' ? '#fef2f2' : '#fffbeb'
+                                                    }}
                                                 >
                                                     <div className="flex items-start justify-between">
-                                                        <div>
-                                                            <p className="text-xs font-semibold text-orange-700">{event.title}</p>
+                                                        <div className="flex-1">
+                                                            <p className="text-sm font-medium text-gray-900">{event.title}</p>
                                                             <p className="text-xs text-gray-600">
                                                                 {new Date(event.start).toLocaleDateString('en-US', {
+                                                                    weekday: 'short',
                                                                     month: 'short',
                                                                     day: 'numeric',
                                                                 })}
+                                                                {event.extendedProps.start_time && (
+                                                                    <span className="ml-2">
+                                                                        {event.extendedProps.start_time} - {event.extendedProps.end_time}
+                                                                    </span>
+                                                                )}
                                                             </p>
                                                             {event.extendedProps.learner && (
-                                                                <p className="text-xs text-gray-600">{event.extendedProps.learner}</p>
+                                                                <p className="text-xs text-gray-600">
+                                                                    Learner: {event.extendedProps.learner}
+                                                                </p>
                                                             )}
                                                             {event.extendedProps.tutor && (
-                                                                <p className="text-xs text-gray-600">with {event.extendedProps.tutor}</p>
+                                                                <p className="text-xs text-gray-500 truncate">
+                                                                    Tutor: {event.extendedProps.tutor}
+                                                                </p>
                                                             )}
                                                         </div>
-                                                        <Badge className="bg-orange-200 text-orange-800">
+                                                        <Badge className={getStatusBadgeClass(event.extendedProps.status || 'pending')}>
                                                             {event.extendedProps.session_number}/{event.extendedProps.total_sessions}
                                                         </Badge>
                                                     </div>
                                                 </div>
                                             ))}
+                                            {upcomingEvents.length > 5 && (
+                                                <Button variant="link" className="w-full text-xs text-orange-600">
+                                                    View {upcomingEvents.length - 5} more
+                                                </Button>
+                                            )}
                                         </div>
                                     ) : (
-                                        <p className="text-center text-sm text-gray-500">No upcoming sessions</p>
+                                        <p className="py-4 text-center text-sm text-gray-500">No upcoming sessions</p>
                                     )}
                                 </CardContent>
                             </Card>

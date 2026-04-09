@@ -11,7 +11,7 @@ class ParentLecturesController extends Controller
 {
     public function index()
     {
-        $lectures = Lecture::with(['program', 'booking.learner', 'booking.tutor.user'])
+        $lectures = Lecture::with(['program', 'booking.learner', 'booking.tutors.user'])
             ->where('is_active', true)
             ->whereHas('booking', function ($query) {
                 // Return lectures for this parent's bookings that are processing or active
@@ -48,10 +48,12 @@ class ParentLecturesController extends Controller
                                 ? asset('storage/' . $lecture->booking->learner->photo)
                                 : null,
                         ] : null,
-                        'tutor' => $lecture->booking->tutor ? [
-                            'tutor_id' => $lecture->booking->tutor->tutor_id,
-                            'name' => $lecture->booking->tutor->user?->name ?? null,
-                        ] : null,
+                        'tutors' => $lecture->booking->tutors->map(function ($tutor) {
+                            return [
+                                'tutor_id' => $tutor->tutor_id,
+                                'name' => $tutor->user?->name ?? null,
+                            ];
+                        }),
                     ] : null,
                 ];
             });

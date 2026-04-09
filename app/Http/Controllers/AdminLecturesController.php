@@ -24,10 +24,9 @@ class AdminLecturesController extends Controller
 
     public function index()
     {
-        $lectures = Lecture::with(['program', 'booking.learner', 'booking.parent', 'booking.tutor.user'])
+        $lectures = Lecture::with(['program', 'booking.learner', 'booking.parent', 'booking.tutors.user'])
             ->where('is_active', true)
             ->whereHas('booking', function ($query) {
-                // Include lectures for bookings that are either processing or active
                 $query->whereIn('booking_status', ['processing', 'active']);
             })
             ->orderBy('created_at', 'desc')
@@ -64,10 +63,12 @@ class AdminLecturesController extends Controller
                         'parent' => $lecture->booking->parent ? [
                             'name' => $lecture->booking->parent->name,
                         ] : null,
-                        'tutor' => $lecture->booking->tutor ? [
-                            'tutor_id' => $lecture->booking->tutor->tutor_id,
-                            'name' => $lecture->booking->tutor->user?->name ?? null,
-                        ] : null,
+                        'tutors' => $lecture->booking->tutors->map(function ($tutor) {
+                            return [
+                                'tutor_id' => $tutor->tutor_id,
+                                'name' => $tutor->user?->name ?? 'Unknown',
+                            ];
+                        })->values()->toArray(),
                     ] : null,
                 ];
             });
@@ -127,13 +128,11 @@ class AdminLecturesController extends Controller
             $phoneNumbers = [];
             $user = $tutor->user;
 
-            // Get phone from user
             $userPhone = $user->routeNotificationForSms();
             if (!empty($userPhone)) {
                 $phoneNumbers[] = $userPhone;
             }
 
-            // Get phone from tutor's direct number
             if (!empty($tutor->number)) {
                 $phoneNumbers[] = $tutor->number;
             }
@@ -150,7 +149,6 @@ class AdminLecturesController extends Controller
                          "You have been assigned to teach \"{$lectureName}\" (Booking ID: {$bookingId}).\n" .
                          "Please check your dashboard.";
 
-            // Send to all collected numbers
             $this->smsService->send($phoneNumbers, $smsMessage);
 
             Log::info('Tutor SMS sent successfully', [
@@ -168,7 +166,6 @@ class AdminLecturesController extends Controller
 
     public function store(Request $request)
     {
-        // First, get the booking to check program type
         $booking = Booking::with('program')->where('book_id', $request->book_id)->first();
         if (!$booking) {
             return redirect()->back()->withErrors(['error' => 'Booking not found.']);
@@ -180,7 +177,6 @@ class AdminLecturesController extends Controller
             'tutor_id' => ['nullable', Rule::exists('tutors', 'tutor_id')],
         ];
 
-        // Only require platform and platform_link if it's not a hub/onsite program
         $isHub = false;
         if ($booking->program?->setting) {
             $progSetting = strtolower($booking->program->setting);
@@ -197,29 +193,31 @@ class AdminLecturesController extends Controller
 
         $validated = $request->validate($rules);
 
-        // Check if lecture already exists for this booking
         if (Lecture::where('book_id', $validated['book_id'])->exists()) {
             return redirect()->back()->withErrors(['error' => 'A lecture already exists for this booking.']);
         }
 
-        // Update booking with tutor if provided
         if (!empty($validated['tutor_id'])) {
-            $booking->update(['tutor_id' => $validated['tutor_id']]);
+            $tutorIds = $booking->tutor_ids ?? [];
+            if (is_string($tutorIds)) {
+                $tutorIds = json_decode($tutorIds, true) ?? [];
+            }
+            if (!in_array($validated['tutor_id'], $tutorIds)) {
+                $tutorIds[] = $validated['tutor_id'];
+                $booking->update(['tutor_ids' => $tutorIds]);
+            }
 
-            // Notify tutor (in-app + SMS)
             try {
                 $tutor = Tutor::where('tutor_id', $validated['tutor_id'])->with('user')->first();
                 $user = $tutor?->user ?? null;
 
                 if ($user) {
-                    // In-app notification
                     $user->notify(new InAppNotification(
                         title: 'New Lecture Assigned',
                         message: 'You have been assigned to teach "' . $validated['name'] . '" (Booking: ' . $booking->book_id . ').',
                         type: 'info'
                     ));
 
-                    // SMS notification using helper method
                     $this->sendTutorSms($tutor, $validated['name'], $booking->book_id);
                 }
             } catch (\Exception $e) {
@@ -253,7 +251,6 @@ class AdminLecturesController extends Controller
             'tutor_id' => ['nullable', Rule::exists('tutors', 'tutor_id')],
         ];
 
-        // Only require platform and platform_link if it's not a hub/onsite program
         $isHub = false;
         if ($lecture->program?->setting) {
             $progSetting = strtolower($lecture->program->setting);
@@ -270,32 +267,35 @@ class AdminLecturesController extends Controller
 
         $validated = $request->validate($rules);
 
-        // Update tutor if provided
-        if (isset($validated['tutor_id'])) {
-            if ($lecture->booking) {
-                $lecture->booking->update(['tutor_id' => $validated['tutor_id']]);
+        if (isset($validated['tutor_id']) && $lecture->booking) {
+            $booking = $lecture->booking;
+            $tutorIds = $booking->tutor_ids ?? [];
+            if (is_string($tutorIds)) {
+                $tutorIds = json_decode($tutorIds, true) ?? [];
+            }
+            if (!in_array($validated['tutor_id'], $tutorIds)) {
+                $tutorIds[] = $validated['tutor_id'];
+                $booking->update(['tutor_ids' => $tutorIds]);
+            }
 
-                // Notify tutor (in-app + SMS) when changed via lecture update
-                try {
-                    $tutor = Tutor::where('tutor_id', $validated['tutor_id'])->with('user')->first();
-                    $user = $tutor?->user ?? null;
+            try {
+                $tutor = Tutor::where('tutor_id', $validated['tutor_id'])->with('user')->first();
+                $user = $tutor?->user ?? null;
 
-                    if ($user) {
-                        $user->notify(new InAppNotification(
-                            title: 'Lecture Assignment Updated',
-                            message: 'You have been assigned to teach "' . $lecture->name . '" (Booking: ' . $lecture->book_id . ').',
-                            type: 'info'
-                        ));
+                if ($user) {
+                    $user->notify(new InAppNotification(
+                        title: 'Lecture Assignment Updated',
+                        message: 'You have been assigned to teach "' . $lecture->name . '" (Booking: ' . $lecture->book_id . ').',
+                        type: 'info'
+                    ));
 
-                        // SMS notification using helper method
-                        $this->sendTutorSms($tutor, $lecture->name, $lecture->book_id);
-                    }
-                } catch (\Exception $e) {
-                    Log::error('Failed to notify tutor on lecture update', [
-                        'tutor_id' => $validated['tutor_id'],
-                        'error' => $e->getMessage()
-                    ]);
+                    $this->sendTutorSms($tutor, $lecture->name, $lecture->book_id);
                 }
+            } catch (\Exception $e) {
+                Log::error('Failed to notify tutor on lecture update', [
+                    'tutor_id' => $validated['tutor_id'],
+                    'error' => $e->getMessage()
+                ]);
             }
             unset($validated['tutor_id']);
         }

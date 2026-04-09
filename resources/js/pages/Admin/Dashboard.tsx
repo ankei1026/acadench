@@ -1,6 +1,6 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { formatDate } from '@/lib/dateTimeFormat';
 import { useState, useEffect, useRef } from 'react';
 
@@ -22,6 +22,16 @@ import {
     Target,
     BarChart3,
     PlayCircle,
+    UserPlus,
+    CheckCircle,
+    XCircle,
+    Clock3,
+    RotateCcw,
+    Edit,
+    Save,
+    UserCheck,
+    UserX,
+    MoreHorizontal,
 } from 'lucide-react';
 
 // UI Components
@@ -30,6 +40,20 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { toast } from 'sonner';
 
 // FullCalendar
 import FullCalendar from '@fullcalendar/react';
@@ -44,8 +68,13 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
+interface Tutor {
+    id: string;
+    name: string;
+    email?: string;
+}
+
 interface DashboardProps {
-    activeBookings?: Array<any>;
     calendarEvents?: Array<any>;
     stats?: {
         totalBookings: number;
@@ -56,12 +85,31 @@ interface DashboardProps {
         completedSessions: number;
         upcomingSessions: number;
     };
+    availableTutors?: Array<{
+        tutor_id: string;
+        name: string;
+        email?: string;
+    }>;
 }
 
-export default function Dashboard({ activeBookings = [], calendarEvents = [], stats }: DashboardProps) {
+export default function Dashboard({ calendarEvents = [], stats, availableTutors = [] }: DashboardProps) {
     const [selectedEvent, setSelectedEvent] = useState<any>(null);
     const [calendarView, setCalendarView] = useState<'dayGridMonth' | 'timeGridWeek' | 'timeGridDay'>('dayGridMonth');
     const [currentTime, setCurrentTime] = useState(new Date());
+
+    // State for modals
+    const [showStatusUpdateModal, setShowStatusUpdateModal] = useState(false);
+    const [selectedTutorId, setSelectedTutorId] = useState<string>('');
+    const [selectedStatus, setSelectedStatus] = useState<string>('');
+    const [sessionNotes, setSessionNotes] = useState<string>('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const [selectedTutorIds, setSelectedTutorIds] = useState<string[]>([]);
+    const [showTutorSubstitutionModal, setShowTutorSubstitutionModal] = useState(false);
+    const [maxTutorCapacity, setMaxTutorCapacity] = useState<number>(1);
+
+    const [isSubstituting, setIsSubstituting] = useState(false);
+    const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
     const calendarRef = useRef<any>(null);
 
@@ -73,7 +121,7 @@ export default function Dashboard({ activeBookings = [], calendarEvents = [], st
 
     // Calculate real stats or use provided ones
     const displayStats = stats || {
-        totalBookings: activeBookings.length,
+        totalBookings: 0,
         activeLearners: 0,
         activeTutors: 0,
         totalSessions: calendarEvents.length,
@@ -96,20 +144,134 @@ export default function Dashboard({ activeBookings = [], calendarEvents = [], st
         })
         .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
 
-    // Group events by month for the progress stats
-    const eventsByMonth = calendarEvents.reduce((acc: any, event) => {
-        const month = new Date(event.start).toLocaleString('default', { month: 'short' });
-        acc[month] = (acc[month] || 0) + 1;
-        return acc;
-    }, {});
-
     // Handle view change
     const handleViewChange = (view: 'dayGridMonth' | 'timeGridWeek' | 'timeGridDay') => {
         setCalendarView(view);
-        // If calendar is mounted, change its view via the FullCalendar API
         if (calendarRef.current && calendarRef.current.getApi) {
             calendarRef.current.getApi().changeView(view);
         }
+    };
+
+    // Helper function to get initials from name
+    const getInitials = (name: string) => {
+        return name
+            .split(' ')
+            .map((n) => n[0])
+            .join('')
+            .toUpperCase()
+            .slice(0, 2);
+    };
+
+    // Get status badge variant
+    const getStatusBadgeClass = (status: string) => {
+        switch (status) {
+            case 'completed':
+                return 'bg-green-100 text-green-700 border-green-200';
+            case 'ongoing':
+                return 'bg-blue-100 text-blue-700 border-blue-200';
+            case 'cancelled':
+                return 'bg-red-100 text-red-700 border-red-200';
+            default:
+                return 'bg-amber-100 text-amber-700 border-amber-200';
+        }
+    };
+
+    // Handle tutor substitution
+    const handleTutorSubstitution = () => {
+        if (!selectedEvent || selectedTutorIds.length === 0) return;
+
+        // Check capacity
+        if (selectedTutorIds.length > maxTutorCapacity) {
+            toast.error(`Cannot assign more than ${maxTutorCapacity} tutor(s) for this program`);
+            return;
+        }
+
+        setIsSubstituting(true);
+
+        router.post(
+            '/admin/sessions/substitute-tutor',
+            {
+                session_id: selectedEvent.extendedProps.session_id,
+                tutor_ids: selectedTutorIds,
+            },
+            {
+                onSuccess: () => {
+                    toast.success('Tutors assigned successfully');
+                    setShowTutorSubstitutionModal(false);
+                    setSelectedTutorIds([]);
+                    setIsSubstituting(false);
+                    router.reload({ only: ['calendarEvents'] });
+                },
+                onError: (errors) => {
+                    toast.error(errors.tutor_ids || errors.session_id || 'Failed to assign tutors');
+                    console.error(errors);
+                    setIsSubstituting(false);
+                },
+            },
+        );
+    };
+
+    // Handle status update
+    const handleStatusUpdate = () => {
+        if (!selectedEvent || !selectedStatus) return;
+
+        setIsUpdatingStatus(true);
+
+        router.post(
+            '/admin/sessions/update-status',
+            {
+                session_id: selectedEvent.extendedProps.session_id,
+                status: selectedStatus,
+                notes: sessionNotes,
+            },
+            {
+                onSuccess: () => {
+                    toast.success('Session status updated successfully');
+                    setShowStatusUpdateModal(false);
+                    setSelectedStatus('');
+                    setSessionNotes('');
+                    setIsUpdatingStatus(false);
+                    router.reload({ only: ['calendarEvents'] });
+                },
+                onError: (errors) => {
+                    toast.error(errors.status || errors.session_id || 'Failed to update session status');
+                    console.error(errors);
+                    setIsUpdatingStatus(false);
+                },
+            },
+        );
+    };
+
+    // Open tutor substitution modal
+    const openTutorSubstitution = (event: any) => {
+        setSelectedEvent(event);
+        // Pre-select current tutors
+        const currentTutorIds = event.extendedProps.tutors?.map((t: any) => t.id) || [];
+        setSelectedTutorIds(currentTutorIds);
+        setMaxTutorCapacity(event.extendedProps.tutor_capacity || 1);
+        setShowTutorSubstitutionModal(true);
+    };
+
+    const toggleTutorSelection = (tutorId: string) => {
+        setSelectedTutorIds((prev) => {
+            if (prev.includes(tutorId)) {
+                return prev.filter((id) => id !== tutorId);
+            } else {
+                if (prev.length >= maxTutorCapacity) {
+                    toast.warning(`Maximum ${maxTutorCapacity} tutor(s) allowed for this program`);
+                    return prev;
+                }
+                return [...prev, tutorId];
+            }
+        });
+    };
+
+    // Open status update modal
+    const openStatusUpdate = (event: any) => {
+        setSelectedEvent(event);
+        setSelectedStatus(event.extendedProps.status || 'pending');
+        setSessionNotes(event.extendedProps.notes || '');
+        setShowStatusUpdateModal(true);
     };
 
     return (
@@ -145,7 +307,7 @@ export default function Dashboard({ activeBookings = [], calendarEvents = [], st
                     </div>
                 </div>
 
-                {/* Stats Grid - Mild colors like Bookings page */}
+                {/* Stats Grid */}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     <div className="rounded-xl border border-amber-100 bg-gradient-to-br from-amber-50 to-orange-50 p-4 shadow-sm">
                         <div className="flex items-center justify-between">
@@ -218,16 +380,33 @@ export default function Dashboard({ activeBookings = [], calendarEvents = [], st
                                     >
                                         <div className="flex items-center justify-between">
                                             <p className="font-medium text-gray-900">{event.title}</p>
-                                            <Badge className="bg-amber-100 text-xs text-amber-700">
+                                            <Badge className={getStatusBadgeClass(event.extendedProps.status)}>
                                                 {event.extendedProps.session_number}/{event.extendedProps.total_sessions}
                                             </Badge>
                                         </div>
                                         <p className="mt-1 text-xs text-gray-600">
                                             <span className="font-medium">Learner:</span> {event.extendedProps.learner || 'TBA'}
                                         </p>
-                                        <p className="text-xs text-gray-600">
-                                            <span className="font-medium">Tutor:</span> {event.extendedProps.tutor || 'Not assigned'}
-                                        </p>
+                                        <div className="text-xs text-gray-600">
+                                            <span className="font-medium">Tutor{event.extendedProps.tutor_count > 1 ? 's' : ''}:</span>{' '}
+                                            {event.extendedProps.tutor_count > 1 ? (
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <span className="inline-flex cursor-help items-center gap-1">
+                                                                <Users className="h-3 w-3" />
+                                                                {event.extendedProps.tutor_count} tutors
+                                                            </span>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            <p>{event.extendedProps.tutor}</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                            ) : (
+                                                event.extendedProps.tutor || 'Not assigned'
+                                            )}
+                                        </div>
                                         {event.extendedProps.start_time && (
                                             <p className="mt-1 text-xs text-gray-600">
                                                 <Clock className="mr-1 inline h-3 w-3" />
@@ -236,11 +415,6 @@ export default function Dashboard({ activeBookings = [], calendarEvents = [], st
                                         )}
                                     </div>
                                 ))}
-                                {todaysEvents.length > 3 && (
-                                    <div className="flex min-w-[60px] items-center justify-center">
-                                        <Badge className="border border-amber-200 bg-amber-100 text-amber-800">+{todaysEvents.length - 3} more</Badge>
-                                    </div>
-                                )}
                             </div>
                         </CardContent>
                     </Card>
@@ -314,17 +488,58 @@ export default function Dashboard({ activeBookings = [], calendarEvents = [], st
                                     }}
                                     height="auto"
                                     dayMaxEvents={3}
+                                    slotMinTime="06:00:00"
+                                    slotMaxTime="22:00:00"
+                                    allDaySlot={false}
+                                    eventTimeFormat={{
+                                        hour: '2-digit',
+                                        minute: '2-digit',
+                                        meridiem: 'short',
+                                    }}
                                     eventClassNames="cursor-pointer hover:opacity-90 transition-opacity"
                                     eventContent={(eventInfo) => {
-                                        const sessionNum = eventInfo.event.extendedProps.session_number;
-                                        const totalSessions = eventInfo.event.extendedProps.total_sessions;
+                                        const props = eventInfo.event.extendedProps;
+                                        const sessionNum = props.session_number;
+                                        const totalSessions = props.total_sessions;
+                                        const startTime = props.start_time;
+                                        const tutorCount = props.tutor_count || 0;
+                                        const status = props.status || 'pending';
+
+                                        // Get gradient based on status
+                                        const getStatusGradient = (status: string) => {
+                                            switch (status) {
+                                                case 'completed':
+                                                    return 'from-green-500 to-emerald-500';
+                                                case 'ongoing':
+                                                    return 'from-blue-500 to-cyan-500';
+                                                case 'cancelled':
+                                                    return 'from-red-500 to-rose-500';
+                                                default:
+                                                    return 'from-amber-500 to-orange-500';
+                                            }
+                                        };
+
                                         return (
-                                            <div className="flex items-center gap-1 overflow-hidden rounded bg-gradient-to-r from-amber-500 to-orange-500 p-1 text-xs text-white shadow-sm">
-                                                <span className="truncate font-medium">{eventInfo.event.title}</span>
-                                                {eventInfo.view.type !== 'dayGridMonth' && (
-                                                    <Badge className="ml-auto border-0 bg-white/20 text-[8px] text-white">
+                                            <div
+                                                className={`flex flex-col overflow-hidden rounded bg-gradient-to-r ${getStatusGradient(status)} p-1 text-xs text-white shadow-sm`}
+                                            >
+                                                <div className="flex items-center gap-1">
+                                                    <span className="truncate font-medium">{eventInfo.event.title}</span>
+                                                    {tutorCount > 1 && (
+                                                        <Badge className="ml-auto border-0 bg-white/20 px-1 py-0 text-[8px]">{tutorCount}</Badge>
+                                                    )}
+                                                </div>
+                                                {eventInfo.view.type === 'timeGridWeek' || eventInfo.view.type === 'timeGridDay' ? (
+                                                    <>
+                                                        <span className="text-[10px] opacity-90">
+                                                            {startTime} • Session {sessionNum}/{totalSessions}
+                                                        </span>
+                                                        <span className="truncate text-[10px] opacity-80">{props.learner}</span>
+                                                    </>
+                                                ) : (
+                                                    <span className="text-[10px] opacity-90">
                                                         {sessionNum}/{totalSessions}
-                                                    </Badge>
+                                                    </span>
                                                 )}
                                             </div>
                                         );
@@ -340,10 +555,33 @@ export default function Dashboard({ activeBookings = [], calendarEvents = [], st
                             {/* Selected Event Details */}
                             <Card className="border border-amber-200 bg-white shadow-sm">
                                 <CardHeader className="border-b border-amber-100 pb-4">
-                                    <CardTitle className="flex items-center gap-2 text-lg font-semibold text-amber-800">
-                                        <CalendarClock className="h-5 w-5 text-amber-500" />
-                                        Session Details
-                                    </CardTitle>
+                                    <div className="flex items-center justify-between">
+                                        <CardTitle className="flex items-center gap-2 text-lg font-semibold text-amber-800">
+                                            <CalendarClock className="h-5 w-5 text-amber-500" />
+                                            Session Details
+                                        </CardTitle>
+                                        {selectedEvent && (
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="sm">
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem onClick={() => openTutorSubstitution(selectedEvent)}>
+                                                        <UserCheck className="mr-2 h-4 w-4" />
+                                                        Substitute Tutor
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => openStatusUpdate(selectedEvent)}>
+                                                        <Edit className="mr-2 h-4 w-4" />
+                                                        Update Status
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        )}
+                                    </div>
                                 </CardHeader>
                                 <CardContent className="p-4">
                                     {selectedEvent ? (
@@ -366,6 +604,12 @@ export default function Dashboard({ activeBookings = [], calendarEvents = [], st
                                                         {selectedEvent.extendedProps.start_time} - {selectedEvent.extendedProps.end_time}
                                                     </p>
                                                 )}
+                                                {selectedEvent.extendedProps.status && (
+                                                    <Badge className={`mt-2 ${getStatusBadgeClass(selectedEvent.extendedProps.status)}`}>
+                                                        {selectedEvent.extendedProps.status.charAt(0).toUpperCase() +
+                                                            selectedEvent.extendedProps.status.slice(1)}
+                                                    </Badge>
+                                                )}
                                             </div>
 
                                             <div className="space-y-2">
@@ -379,15 +623,43 @@ export default function Dashboard({ activeBookings = [], calendarEvents = [], st
                                                     </div>
                                                 </div>
 
-                                                <div className="flex items-center gap-3 rounded-lg border border-amber-100 p-3">
+                                                <div className="flex items-start gap-3 rounded-lg border border-amber-100 p-3">
                                                     <div className="rounded-full bg-amber-100 p-2">
                                                         <BookOpen className="h-4 w-4 text-amber-600" />
                                                     </div>
-                                                    <div>
-                                                        <p className="text-xs text-gray-500">Tutor</p>
-                                                        <p className="font-medium text-gray-900">
-                                                            {selectedEvent.extendedProps.tutor || 'Not assigned'}
-                                                        </p>
+                                                    <div className="flex-1">
+                                                        <div className="mb-1 flex items-center gap-2">
+                                                            <p className="text-xs text-gray-500">
+                                                                Tutor{selectedEvent.extendedProps.tutor_count > 1 ? 's' : ''}
+                                                            </p>
+                                                            {selectedEvent.extendedProps.tutor_capacity && (
+                                                                <Badge className="bg-amber-50 text-[10px] text-amber-700">
+                                                                    {selectedEvent.extendedProps.tutor_count || 0}/
+                                                                    {selectedEvent.extendedProps.tutor_capacity} assigned
+                                                                </Badge>
+                                                            )}
+                                                        </div>
+                                                        {selectedEvent.extendedProps.tutors && selectedEvent.extendedProps.tutors.length > 0 ? (
+                                                            <div className="space-y-2">
+                                                                {selectedEvent.extendedProps.tutors.map((tutor: Tutor, index: number) => (
+                                                                    <div key={tutor.id} className="flex items-center gap-2">
+                                                                        <Avatar className="h-6 w-6">
+                                                                            <AvatarFallback className="bg-gradient-to-r from-amber-400 to-orange-400 text-[10px] text-white">
+                                                                                {getInitials(tutor.name)}
+                                                                            </AvatarFallback>
+                                                                        </Avatar>
+                                                                        <div>
+                                                                            <p className="text-sm font-medium text-gray-900">{tutor.name}</p>
+                                                                            {tutor.email && (
+                                                                                <p className="text-[10px] text-gray-500">{tutor.email}</p>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        ) : (
+                                                            <p className="text-sm text-gray-500">No tutors assigned</p>
+                                                        )}
                                                     </div>
                                                 </div>
 
@@ -398,8 +670,20 @@ export default function Dashboard({ activeBookings = [], calendarEvents = [], st
                                                     <div>
                                                         <p className="text-xs text-gray-500">Program</p>
                                                         <p className="font-medium text-gray-900">{selectedEvent.extendedProps.program || '—'}</p>
+                                                        {selectedEvent.extendedProps.program_type && (
+                                                            <Badge className="mt-1 bg-amber-50 text-[10px] text-amber-700">
+                                                                {selectedEvent.extendedProps.program_type}
+                                                            </Badge>
+                                                        )}
                                                     </div>
                                                 </div>
+
+                                                {selectedEvent.extendedProps.notes && (
+                                                    <div className="rounded-lg border border-amber-100 bg-amber-50/50 p-3">
+                                                        <p className="text-xs font-medium text-amber-800">Notes</p>
+                                                        <p className="mt-1 text-sm text-gray-700">{selectedEvent.extendedProps.notes}</p>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     ) : (
@@ -432,7 +716,7 @@ export default function Dashboard({ activeBookings = [], calendarEvents = [], st
                                                 >
                                                     <div className="flex items-center justify-between">
                                                         <p className="text-sm font-medium text-gray-900">{event.title}</p>
-                                                        <Badge className="border border-amber-200 bg-white text-[10px] text-amber-700">
+                                                        <Badge className={getStatusBadgeClass(event.extendedProps.status)}>
                                                             {new Date(event.start).toLocaleDateString('en-US', {
                                                                 month: 'short',
                                                                 day: 'numeric',
@@ -442,16 +726,23 @@ export default function Dashboard({ activeBookings = [], calendarEvents = [], st
                                                     <p className="mt-1 text-xs text-gray-600">
                                                         Session {event.extendedProps.session_number}/{event.extendedProps.total_sessions}
                                                     </p>
-                                                    <p className="text-xs text-gray-500">
-                                                        {event.extendedProps.learner || 'No learner'} • {event.extendedProps.tutor || 'No tutor'}
-                                                    </p>
+                                                    <div className="flex items-center justify-between">
+                                                        <p className="text-xs text-gray-500">{event.extendedProps.learner || 'No learner'}</p>
+                                                        <div className="flex items-center gap-1">
+                                                            {event.extendedProps.tutor_count > 1 ? (
+                                                                <span className="inline-flex items-center gap-1 text-xs text-amber-600">
+                                                                    <Users className="h-3 w-3" />
+                                                                    {event.extendedProps.tutor_count} tutors
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-xs text-gray-500">
+                                                                    {event.extendedProps.tutor || 'No tutor'}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             ))}
-                                            {upcomingEvents.length > 5 && (
-                                                <Button variant="link" className="w-full text-xs text-amber-600">
-                                                    View {upcomingEvents.length - 5} more
-                                                </Button>
-                                            )}
                                         </div>
                                     ) : (
                                         <p className="py-4 text-center text-sm text-gray-500">No upcoming sessions</p>
@@ -462,6 +753,153 @@ export default function Dashboard({ activeBookings = [], calendarEvents = [], st
                     </div>
                 </div>
             </div>
+
+            {/* Tutor Substitution Modal */}
+            <Dialog open={showTutorSubstitutionModal} onOpenChange={setShowTutorSubstitutionModal}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Manage Session Tutors</DialogTitle>
+                        <DialogDescription>
+                            Select up to {maxTutorCapacity} tutor{maxTutorCapacity > 1 ? 's' : ''} for this session.
+                            {selectedEvent?.extendedProps.tutor_capacity && (
+                                <Badge className="ml-2 bg-amber-100 text-amber-700">
+                                    {selectedTutorIds.length}/{maxTutorCapacity} selected
+                                </Badge>
+                            )}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div>
+                            <Label>Current Tutor(s)</Label>
+                            <div className="mt-1 space-y-1">
+                                {selectedEvent?.extendedProps.tutors && selectedEvent.extendedProps.tutors.length > 0 ? (
+                                    selectedEvent.extendedProps.tutors.map((tutor: any) => (
+                                        <div key={tutor.id} className="flex items-center gap-2 text-sm">
+                                            <Avatar className="h-6 w-6">
+                                                <AvatarFallback className="bg-gradient-to-r from-amber-400 to-orange-400 text-[10px] text-white">
+                                                    {getInitials(tutor.name)}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            <span className="text-gray-700">{tutor.name}</span>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <p className="text-sm text-gray-500">No tutors assigned</p>
+                                )}
+                            </div>
+                        </div>
+
+                        <div>
+                            <Label>Select Tutor(s)</Label>
+                            <p className="mb-2 text-xs text-gray-500">Click to select/deselect tutors (max {maxTutorCapacity})</p>
+                            <div className="max-h-64 space-y-1 overflow-y-auto rounded-lg border border-amber-200 p-2">
+                                {availableTutors.length > 0 ? (
+                                    availableTutors.map((tutor) => {
+                                        const isSelected = selectedTutorIds.includes(tutor.tutor_id);
+                                        const isDisabled = !isSelected && selectedTutorIds.length >= maxTutorCapacity;
+
+                                        return (
+                                            <div
+                                                key={tutor.tutor_id}
+                                                className={`flex cursor-pointer items-center gap-3 rounded-lg p-2 transition-all ${isSelected ? 'border-amber-300 bg-amber-100' : 'hover:bg-amber-50'} ${isDisabled ? 'cursor-not-allowed opacity-50' : ''} `}
+                                                onClick={() => !isDisabled && toggleTutorSelection(tutor.tutor_id)}
+                                            >
+                                                <div className="flex h-5 w-5 items-center justify-center">
+                                                    {isSelected ? (
+                                                        <CheckCircle className="h-5 w-5 text-amber-600" />
+                                                    ) : (
+                                                        <div className="h-5 w-5 rounded-full border-2 border-gray-300" />
+                                                    )}
+                                                </div>
+                                                <Avatar className="h-8 w-8">
+                                                    <AvatarFallback className="bg-gradient-to-r from-amber-400 to-orange-400 text-xs text-white">
+                                                        {getInitials(tutor.name)}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                                <div className="flex-1">
+                                                    <p className="text-sm font-medium text-gray-900">{tutor.name}</p>
+                                                    {tutor.email && <p className="text-xs text-gray-500">{tutor.email}</p>}
+                                                </div>
+                                            </div>
+                                        );
+                                    })
+                                ) : (
+                                    <p className="py-4 text-center text-sm text-gray-500">No tutors available</p>
+                                )}
+                            </div>
+                        </div>
+
+                        {selectedTutorIds.length > 0 && (
+                            <div className="rounded-lg bg-amber-50 p-3">
+                                <p className="text-xs font-medium text-amber-800">Selected Tutors ({selectedTutorIds.length})</p>
+                                <div className="mt-1 flex flex-wrap gap-1">
+                                    {selectedTutorIds.map((tutorId) => {
+                                        const tutor = availableTutors.find((t) => t.tutor_id === tutorId);
+                                        return tutor ? (
+                                            <Badge key={tutorId} className="bg-amber-100 text-amber-700">
+                                                {tutor.name}
+                                            </Badge>
+                                        ) : null;
+                                    })}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowTutorSubstitutionModal(false)}>
+                            Cancel
+                        </Button>
+                        <Button onClick={handleTutorSubstitution} disabled={selectedTutorIds.length === 0 || isSubstituting}>
+                            {isSubstituting ? 'Saving...' : `Assign ${selectedTutorIds.length} Tutor(s)`}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Status Update Modal */}
+            {/* Status Update Modal */}
+            <Dialog open={showStatusUpdateModal} onOpenChange={setShowStatusUpdateModal}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Update Session Status</DialogTitle>
+                        <DialogDescription>Change the status of this session and add optional notes.</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div>
+                            <Label htmlFor="status">Status</Label>
+                            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="pending">Pending</SelectItem>
+                                    <SelectItem value="ongoing">Ongoing</SelectItem>
+                                    <SelectItem value="completed">Completed</SelectItem>
+                                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div>
+                            <Label htmlFor="notes">Notes (Optional)</Label>
+                            <Textarea
+                                id="notes"
+                                value={sessionNotes}
+                                onChange={(e) => setSessionNotes(e.target.value)}
+                                placeholder="Add any notes about this session..."
+                                rows={4}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowStatusUpdateModal(false)}>
+                            Cancel
+                        </Button>
+                        <Button onClick={handleStatusUpdate} disabled={!selectedStatus || isUpdatingStatus}>
+                            {isUpdatingStatus ? 'Updating...' : 'Update Status'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </AppLayout>
     );
 }

@@ -1,20 +1,47 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { useState, useEffect, useRef } from 'react';
-import { BookOpen, Video, User, ArrowRight, Calendar, Clock, Sun, TrendingUp, CalendarDays, Target, CalendarClock, PlayCircle, UserCircle } from 'lucide-react';
+import {
+    BookOpen,
+    Video,
+    User,
+    Calendar,
+    Clock,
+    Sun,
+    CalendarDays,
+    Target,
+    CalendarClock,
+    PlayCircle,
+    UserCircle,
+    Edit,
+    MoreHorizontal,
+    CheckCircle,
+    XCircle,
+    Clock3,
+} from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { toast } from 'sonner';
 
 // FullCalendar
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
-// import '@fullcalendar/core/index.css';
-// import '@fullcalendar/daygrid/index.css';
-// import '@fullcalendar/timegrid/index.css';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -30,6 +57,7 @@ interface CalendarEvent {
     end?: string;
     allDay: boolean;
     extendedProps: {
+        session_id?: string;
         booking_id?: string;
         lecture_ids?: string[];
         lecture_count?: number;
@@ -40,6 +68,8 @@ interface CalendarEvent {
         program?: string | null;
         start_time?: string | null;
         end_time?: string | null;
+        status?: string;
+        notes?: string | null;
     };
 }
 
@@ -59,6 +89,12 @@ export default function TutorDashboard({ calendarEvents = [], stats, tutor_id }:
     const [calendarView, setCalendarView] = useState<'dayGridMonth' | 'timeGridWeek' | 'timeGridDay'>('dayGridMonth');
     const [currentTime, setCurrentTime] = useState(new Date());
 
+    // State for status update modal
+    const [showStatusUpdateModal, setShowStatusUpdateModal] = useState(false);
+    const [selectedStatus, setSelectedStatus] = useState<string>('');
+    const [sessionNotes, setSessionNotes] = useState<string>('');
+    const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+
     const calendarRef = useRef<any>(null);
 
     // Update current time every minute
@@ -67,13 +103,12 @@ export default function TutorDashboard({ calendarEvents = [], stats, tutor_id }:
         return () => clearInterval(timer);
     }, []);
 
-    // Get today's events (include multi-day events where today falls within start..end)
+    // Get today's events
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
     const todaysEvents = calendarEvents.filter((event) => {
         const start = new Date(event.start);
         const end = event.end ? new Date(event.end) : start;
-        // normalize to date-only by comparing ISO date strings
         return start <= today && today <= new Date(end.getFullYear(), end.getMonth(), end.getDate());
     });
 
@@ -84,7 +119,6 @@ export default function TutorDashboard({ calendarEvents = [], stats, tutor_id }:
         .filter((event) => {
             const start = new Date(event.start);
             const end = event.end ? new Date(event.end) : start;
-            // include events that overlap the next 7 days window
             return end >= today && start <= nextWeek;
         })
         .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
@@ -97,20 +131,87 @@ export default function TutorDashboard({ calendarEvents = [], stats, tutor_id }:
         }
     };
 
+    // Get status badge variant
+    const getStatusBadgeClass = (status: string) => {
+        switch (status) {
+            case 'completed':
+                return 'bg-green-100 text-green-700 border-green-200';
+            case 'ongoing':
+                return 'bg-blue-100 text-blue-700 border-blue-200';
+            case 'cancelled':
+                return 'bg-red-100 text-red-700 border-red-200';
+            default:
+                return 'bg-amber-100 text-amber-700 border-amber-200';
+        }
+    };
+
+    // Get status icon
+    const getStatusIcon = (status: string) => {
+        switch (status) {
+            case 'completed':
+                return <CheckCircle className="h-4 w-4 text-green-600" />;
+            case 'ongoing':
+                return <Clock3 className="h-4 w-4 text-blue-600" />;
+            case 'cancelled':
+                return <XCircle className="h-4 w-4 text-red-600" />;
+            default:
+                return <Clock3 className="h-4 w-4 text-amber-600" />;
+        }
+    };
+
+    // Handle status update
+    const handleStatusUpdate = () => {
+        if (!selectedEvent || !selectedStatus) return;
+
+        setIsUpdatingStatus(true);
+
+        router.post(
+            '/tutor/sessions/update-status',
+            {
+                session_id: selectedEvent.extendedProps.session_id,
+                status: selectedStatus,
+                notes: sessionNotes,
+            },
+            {
+                onSuccess: () => {
+                    toast.success('Session status updated successfully');
+                    setShowStatusUpdateModal(false);
+                    setSelectedStatus('');
+                    setSessionNotes('');
+                    setIsUpdatingStatus(false);
+                    router.reload({ only: ['calendarEvents'] });
+                },
+                onError: (errors: any) => {
+                    toast.error(errors.status || errors.session_id || 'Failed to update session status');
+                    console.error(errors);
+                    setIsUpdatingStatus(false);
+                },
+            },
+        );
+    };
+
+    // Open status update modal
+    const openStatusUpdate = (event: any) => {
+        setSelectedEvent(event);
+        setSelectedStatus(event.extendedProps.status || 'pending');
+        setSessionNotes(event.extendedProps.notes || '');
+        setShowStatusUpdateModal(true);
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Tutor Dashboard" />
 
             <div className="flex h-full flex-1 flex-col gap-6 p-6">
                 {/* Hero Header */}
-                <div className="rounded-xl border border-orange-200 bg-linear-to-r from-orange-500/10 via-amber-500/10 to-orange-500/10 p-6 backdrop-blur-sm">
+                <div className="rounded-xl border border-orange-200 bg-gradient-to-r from-orange-500/10 via-amber-500/10 to-orange-500/10 p-6 backdrop-blur-sm">
                     <div className="flex items-start justify-between">
                         <div className="flex flex-col gap-2">
                             <div className="flex items-center gap-3">
-                                <div className="rounded-full bg-linear-to-r from-orange-500 to-amber-500 p-3 shadow-md">
+                                <div className="rounded-full bg-gradient-to-r from-orange-500 to-amber-500 p-3 shadow-md">
                                     <User className="h-6 w-6 text-white" />
                                 </div>
-                                <h1 className="bg-linear-to-r from-orange-700 to-amber-700 bg-clip-text text-3xl font-bold text-transparent">
+                                <h1 className="bg-gradient-to-r from-orange-700 to-amber-700 bg-clip-text text-3xl font-bold text-transparent">
                                     Tutor Dashboard
                                 </h1>
                             </div>
@@ -132,49 +233,39 @@ export default function TutorDashboard({ calendarEvents = [], stats, tutor_id }:
 
                 {/* Stats Grid */}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    <div className="rounded-xl border border-orange-100 bg-linear-to-br from-orange-50 to-amber-50 p-4 shadow-sm">
+                    <div className="rounded-xl border border-orange-100 bg-gradient-to-br from-orange-50 to-amber-50 p-4 shadow-sm">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-orange-700">Total Lectures</p>
-                                <p className="text-2xl font-bold text-gray-900">{stats.totalLectures}</p>
+                                <p className="text-sm font-medium text-orange-700">Active Bookings</p>
+                                <p className="text-2xl font-bold text-gray-900">{stats.activeBookings}</p>
                             </div>
-                            <div className="rounded-lg bg-linear-to-r from-orange-500 to-amber-500 p-2.5"></div>
-                        </div>
-                        <div className="mt-2 flex items-center gap-1 text-xs text-orange-600">
-                            <Video className="h-3 w-3" />
-                            <span>{stats.totalLectures} lectures</span>
+                            <div className="rounded-lg bg-gradient-to-r from-orange-500 to-amber-500 p-2.5">
+                                <Calendar className="h-5 w-5 text-white" />
+                            </div>
                         </div>
                     </div>
 
-                    <div className="rounded-xl border border-orange-100 bg-linear-to-br from-orange-50 to-emerald-50 p-4 shadow-sm">
+                    <div className="rounded-xl border border-orange-100 bg-gradient-to-br from-orange-50 to-emerald-50 p-4 shadow-sm">
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-orange-700">Total Students</p>
                                 <p className="text-2xl font-bold text-gray-900">{stats.totalStudents}</p>
                             </div>
-                            <div className="rounded-lg bg-linear-to-r from-orange-500 to-yellow-500 p-2.5">
+                            <div className="rounded-lg bg-gradient-to-r from-orange-500 to-yellow-500 p-2.5">
                                 <User className="h-5 w-5 text-white" />
                             </div>
                         </div>
-                        <div className="mt-2 flex items-center gap-1 text-xs text-orange-600">
-                            <User className="h-3 w-3" />
-                            <span>{stats.totalStudents} students</span>
-                        </div>
                     </div>
 
-                    <div className="rounded-xl border border-orange-100 bg-linear-to-br from-orange-50 to-pink-50 p-4 shadow-sm">
+                    <div className="rounded-xl border border-orange-100 bg-gradient-to-br from-orange-50 to-pink-50 p-4 shadow-sm">
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-orange-700">Total Sessions</p>
                                 <p className="text-2xl font-bold text-gray-900">{stats.totalSessions}</p>
                             </div>
-                            <div className="rounded-lg bg-linear-to-r from-orange-500 to-yellow-500 p-2.5">
+                            <div className="rounded-lg bg-gradient-to-r from-orange-500 to-yellow-500 p-2.5">
                                 <Target className="h-5 w-5 text-white" />
                             </div>
-                        </div>
-                        <div className="mt-2 flex items-center gap-1 text-xs text-orange-600">
-                            <CalendarClock className="h-3 w-3" />
-                            <span>{stats.totalSessions} upcoming</span>
                         </div>
                     </div>
                 </div>
@@ -184,11 +275,11 @@ export default function TutorDashboard({ calendarEvents = [], stats, tutor_id }:
                     <Card className="border border-orange-200">
                         <CardContent className="p-4">
                             <div className="flex items-center gap-2">
-                                <div className="rounded-full bg-linear-to-r from-orange-500 to-amber-500 p-2">
+                                <div className="rounded-full bg-gradient-to-r from-orange-500 to-amber-500 p-2">
                                     <Clock className="h-4 w-4 text-white" />
                                 </div>
                                 <h3 className="font-semibold text-orange-800">Today's Schedule</h3>
-                                <Badge className="border-0 bg-linear-to-r from-orange-500 to-amber-500 text-white">
+                                <Badge className="border-0 bg-gradient-to-r from-orange-500 to-amber-500 text-white">
                                     {todaysEvents.length} sessions
                                 </Badge>
                             </div>
@@ -196,16 +287,21 @@ export default function TutorDashboard({ calendarEvents = [], stats, tutor_id }:
                                 {todaysEvents.slice(0, 3).map((event) => (
                                     <div
                                         key={event.id}
-                                        className="min-w-62.5 cursor-pointer rounded-lg border border-orange-200 bg-white p-3 shadow-sm transition-all hover:shadow-md"
+                                        className="min-w-[250px] cursor-pointer rounded-lg border border-orange-200 bg-white p-3 shadow-sm transition-all hover:shadow-md"
                                         onClick={() => setSelectedEvent(event)}
                                     >
-                                        <div className="font-semibold text-gray-900">{event.title}</div>
+                                        <div className="flex items-center justify-between">
+                                            <div className="font-semibold text-gray-900">{event.title}</div>
+                                            <Badge className={getStatusBadgeClass(event.extendedProps.status || 'pending')}>
+                                                {event.extendedProps.status || 'pending'}
+                                            </Badge>
+                                        </div>
                                         <div className="mt-1 text-xs text-gray-600">
                                             {event.extendedProps.session_number
                                                 ? `Session ${event.extendedProps.session_number} of ${event.extendedProps.total_sessions}`
                                                 : event.extendedProps.lecture_count
-                                                ? `${event.extendedProps.lecture_count} lecture(s)`
-                                                : 'Lecture'}
+                                                  ? `${event.extendedProps.lecture_count} lecture(s)`
+                                                  : 'Lecture'}
                                         </div>
                                         {event.extendedProps.learner && (
                                             <div className="mt-1 text-xs text-gray-700">
@@ -220,7 +316,7 @@ export default function TutorDashboard({ calendarEvents = [], stats, tutor_id }:
                                     </div>
                                 ))}
                                 {todaysEvents.length > 3 && (
-                                    <div className="flex min-w-15 items-center justify-center">
+                                    <div className="flex min-w-[60px] items-center justify-center">
                                         <span className="text-xs text-gray-500">+{todaysEvents.length - 3} more</span>
                                     </div>
                                 )}
@@ -301,8 +397,20 @@ export default function TutorDashboard({ calendarEvents = [], stats, tutor_id }:
                                     eventContent={(eventInfo) => {
                                         const sessionNum = eventInfo.event.extendedProps?.session_number;
                                         const totalSessions = eventInfo.event.extendedProps?.total_sessions;
+                                        const status = eventInfo.event.extendedProps?.status || 'pending';
+
                                         return (
-                                            <div className="flex items-center gap-1 overflow-hidden rounded bg-linear-to-r from-orange-500 to-amber-500 p-1 text-xs text-white shadow-sm">
+                                            <div
+                                                className={`flex items-center gap-1 overflow-hidden rounded bg-gradient-to-r ${
+                                                    status === 'completed'
+                                                        ? 'from-green-500 to-emerald-500'
+                                                        : status === 'ongoing'
+                                                          ? 'from-blue-500 to-cyan-500'
+                                                          : status === 'cancelled'
+                                                            ? 'from-red-500 to-rose-500'
+                                                            : 'from-orange-500 to-amber-500'
+                                                } p-1 text-xs text-white shadow-sm`}
+                                            >
                                                 <span className="truncate">{eventInfo.event.title}</span>
                                                 {eventInfo.view.type !== 'dayGridMonth' && sessionNum && totalSessions && (
                                                     <span className="ml-1 shrink-0 rounded bg-white/20 px-1 py-0.5 text-xs font-semibold">
@@ -323,10 +431,29 @@ export default function TutorDashboard({ calendarEvents = [], stats, tutor_id }:
                             {/* Selected Event Details */}
                             <Card className="border border-orange-200 bg-white shadow-sm">
                                 <CardHeader className="border-b border-orange-100 pb-4">
-                                    <CardTitle className="flex items-center gap-2 text-lg font-semibold text-orange-800">
-                                        <CalendarClock className="h-5 w-5 text-orange-500" />
-                                        Session Details
-                                    </CardTitle>
+                                    <div className="flex items-center justify-between">
+                                        <CardTitle className="flex items-center gap-2 text-lg font-semibold text-orange-800">
+                                            <CalendarClock className="h-5 w-5 text-orange-500" />
+                                            Session Details
+                                        </CardTitle>
+                                        {selectedEvent && (
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="sm">
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem onClick={() => openStatusUpdate(selectedEvent)}>
+                                                        <Edit className="mr-2 h-4 w-4" />
+                                                        Update Status
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        )}
+                                    </div>
                                 </CardHeader>
                                 <CardContent className="p-4">
                                     {selectedEvent ? (
@@ -346,16 +473,25 @@ export default function TutorDashboard({ calendarEvents = [], stats, tutor_id }:
                                                     {selectedEvent.end
                                                         ? `${new Date(selectedEvent.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — ${new Date(selectedEvent.end).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
                                                         : new Date(selectedEvent.start).toLocaleDateString('en-US', {
-                                                            weekday: 'short',
-                                                            month: 'short',
-                                                            day: 'numeric',
-                                                        })}
+                                                              weekday: 'short',
+                                                              month: 'short',
+                                                              day: 'numeric',
+                                                          })}
                                                 </p>
                                                 {selectedEvent.extendedProps.start_time && (
                                                     <p className="mt-1 flex items-center gap-1 text-sm text-gray-600">
                                                         <Clock className="h-4 w-4 text-orange-500" />
                                                         {selectedEvent.extendedProps.start_time} - {selectedEvent.extendedProps.end_time}
                                                     </p>
+                                                )}
+                                                {selectedEvent.extendedProps.status && (
+                                                    <div className="mt-2 flex items-center gap-2">
+                                                        {getStatusIcon(selectedEvent.extendedProps.status)}
+                                                        <Badge className={getStatusBadgeClass(selectedEvent.extendedProps.status)}>
+                                                            {selectedEvent.extendedProps.status.charAt(0).toUpperCase() +
+                                                                selectedEvent.extendedProps.status.slice(1)}
+                                                        </Badge>
+                                                    </div>
                                                 )}
                                             </div>
 
@@ -381,6 +517,13 @@ export default function TutorDashboard({ calendarEvents = [], stats, tutor_id }:
                                                             <p className="text-xs text-gray-500">Program</p>
                                                             <p className="font-medium text-gray-900">{selectedEvent.extendedProps.program}</p>
                                                         </div>
+                                                    </div>
+                                                )}
+
+                                                {selectedEvent.extendedProps.notes && (
+                                                    <div className="rounded-lg border border-orange-100 bg-orange-50/50 p-3">
+                                                        <p className="text-xs font-medium text-orange-800">Notes</p>
+                                                        <p className="mt-1 text-sm text-gray-700">{selectedEvent.extendedProps.notes}</p>
                                                     </div>
                                                 )}
                                             </div>
@@ -426,7 +569,7 @@ export default function TutorDashboard({ calendarEvents = [], stats, tutor_id }:
                                                                 <p className="text-xs text-gray-600">{event.extendedProps.learner}</p>
                                                             )}
                                                         </div>
-                                                        <Badge className="bg-orange-200 text-orange-800">
+                                                        <Badge className={getStatusBadgeClass(event.extendedProps.status || 'pending')}>
                                                             {event.extendedProps.session_number
                                                                 ? `${event.extendedProps.session_number}/${event.extendedProps.total_sessions}`
                                                                 : 'Lecture'}
@@ -444,6 +587,50 @@ export default function TutorDashboard({ calendarEvents = [], stats, tutor_id }:
                     </div>
                 </div>
             </div>
+
+            {/* Status Update Modal */}
+            <Dialog open={showStatusUpdateModal} onOpenChange={setShowStatusUpdateModal}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Update Session Status</DialogTitle>
+                        <DialogDescription>Change the status of this session and add optional notes.</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div>
+                            <Label htmlFor="status">Status</Label>
+                            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="pending">Pending</SelectItem>
+                                    <SelectItem value="ongoing">Ongoing</SelectItem>
+                                    <SelectItem value="completed">Completed</SelectItem>
+                                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div>
+                            <Label htmlFor="notes">Notes (Optional)</Label>
+                            <Textarea
+                                id="notes"
+                                value={sessionNotes}
+                                onChange={(e) => setSessionNotes(e.target.value)}
+                                placeholder="Add any notes about this session..."
+                                rows={4}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowStatusUpdateModal(false)}>
+                            Cancel
+                        </Button>
+                        <Button onClick={handleStatusUpdate} disabled={!selectedStatus || isUpdatingStatus}>
+                            {isUpdatingStatus ? 'Updating...' : 'Update Status'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </AppLayout>
     );
 }

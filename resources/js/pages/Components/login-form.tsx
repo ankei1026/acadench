@@ -37,11 +37,18 @@ export function LoginForm({
                 });
             },
 
-            onError: () => {
-                toast.error('Login failed', {
-                    description: 'Invalid email or password.',
-                    className: 'bg-red-50 text-red-800 border-red-200',
-                });
+            onError: (errors) => {
+                if (errors.tutor) {
+                    toast.error('Login failed', {
+                        description: errors.tutor,
+                        className: 'bg-red-50 text-red-800 border-red-200',
+                    });
+                } else {
+                    toast.error('Login failed', {
+                        description: 'Invalid email or password.',
+                        className: 'bg-red-50 text-red-800 border-red-200',
+                    });
+                }
             },
 
             onFinish: () => {
@@ -84,6 +91,11 @@ export function LoginForm({
                                 {errors.email && (
                                     <p className="text-sm text-red-500">
                                         {errors.email}
+                                    </p>
+                                )}
+                                {errors.tutor && (
+                                    <p className="text-sm text-red-500">
+                                        {errors.tutor}
                                     </p>
                                 )}
                             </Field>

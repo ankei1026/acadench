@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Booking;
 use App\Models\Lecture;
 use App\Models\Tutor;
+use App\Models\BookingSession;
 use App\Notifications\InAppNotification;
 use App\Services\SmsService;
 use Illuminate\Http\Request;
@@ -22,22 +23,23 @@ class AdminBookingController extends Controller
 
     public function index(Request $request)
     {
-        $bookingsQuery = Booking::with(['parent', 'learner', 'program', 'tutor.user', 'receipts'])
-            ->orderBy('created_at', 'desc')
-        ;
 
-        $bookings = $bookingsQuery->get()->map(function ($booking) {
-            $bookingData = $booking->toArray();
-            $bookingData['total_paid'] = $booking->receipts->sum('amount');
-            $bookingData['remaining_balance'] = max(0, $booking->amount - $booking->receipts->sum('amount'));
-            $bookingData['receipt_count'] = $booking->receipts->count();
-            if ($booking->tutor) {
-                $bookingData['tutor'] = [
-                    'tutor_id' => $booking->tutor->tutor_id,
-                    'name' => $booking->tutor->user?->name ?? null,
+        $bookingsQuery = Booking::with(['parent', 'learner', 'program', 'tutors.user', 'receipts'])
+            ->orderBy('created_at', 'desc');
+
+        $bookings = $bookingsQuery->get()->each(function ($booking) {
+            $booking->total_paid = $booking->receipts->sum('amount');
+            $booking->remaining_balance = max(0, $booking->amount - $booking->receipts->sum('amount'));
+            $booking->receipt_count = $booking->receipts->count();
+            // Add tutors array for multiple tutors
+            $booking->tutors = $booking->tutors->map(function ($tutor) {
+                return [
+                    'tutor_id' => $tutor->tutor_id,
+                    'name' => $tutor->user?->name ?? null,
                 ];
-            }
-            return $bookingData;
+            })->values()->all();
+            // Expose raw tutor_ids field (cast to array if needed)
+            $booking->tutor_ids = is_array($booking->tutor_ids) ? $booking->tutor_ids : (json_decode($booking->tutor_ids, true) ?: []);
         });
 
         // If a single booking_id is requested, prepare a separate `updated_booking` payload so the
@@ -88,24 +90,21 @@ class AdminBookingController extends Controller
 
             if ($request->status === 'declined' && $request->decline_reason) {
                 $booking->decline_reason = $request->decline_reason;
-                // Set lecture is_active to false when booking is declined
                 Lecture::where('book_id', $booking->book_id)->update(['is_active' => false]);
 
-                // Notify parent of booking rejection
                 $booking->parent->notify(new InAppNotification(
                     title: 'Booking Declined',
                     message: 'Your booking for ' . $booking->program?->name . ' has been declined. Reason: ' . $request->decline_reason,
                     type: 'warning'
                 ));
             } elseif ($request->status === 'approved') {
-                // Notify parent of booking approval
                 $booking->parent->notify(new InAppNotification(
                     title: 'Booking Approved!',
                     message: 'Your booking for ' . $booking->program?->name . ' has been approved!',
                     type: 'success'
                 ));
 
-                // Send SMS to learner emergency contact (primary) if available
+                // Send SMS to learner emergency contact
                 try {
                     $phone = $booking->learner?->emergency_contact_primary;
                     if (!empty($phone)) {
@@ -124,26 +123,84 @@ class AdminBookingController extends Controller
                     ]);
                 }
 
-                // Notify assigned tutor(s) about the lectures
-                if ($booking->tutor) {
-                    $lectures = Lecture::where('book_id', $booking->book_id)->get();
-                    foreach ($lectures as $lecture) {
-                        $booking->tutor->user->notify(new InAppNotification(
-                            title: 'New Lecture Assignment',
-                            message: 'You have been assigned to teach "' . $lecture->name . '" (' . $booking->learner?->name . ')',
-                            type: 'info'
-                        ));
-                    }
-                    // Send SMS to newly assigned tutor
-                    try {
-                        $phone = $booking->tutor->user->routeNotificationForSms();
-                        if (!empty($phone)) {
-                            $smsMessage = "ACADENCH + SORAYA LEARNING HUB - New Lecture Assignment\nYou have been assigned to teach for booking ID: {$booking->book_id}. Please check your dashboard.";
-                            $this->smsService->send($phone, $smsMessage, $booking->tutor->number ?? null);
-                            Log::info('Sent tutor assignment SMS', ['book_id' => $booking->book_id, 'tutor' => $booking->tutor->tutor_id, 'phone' => $phone]);
+                // Create booking sessions for each scheduled day if not already exists
+                if ($booking->sessions()->count() === 0) {
+                    $program = $booking->program;
+                    $days = $program->days;
+                    if (!is_array($days)) {
+                        $decoded = json_decode($days, true);
+                        if (is_array($decoded)) {
+                            $days = $decoded;
+                        } elseif (is_string($days)) {
+                            $days = array_map('trim', explode(',', $days));
+                        } else {
+                            $days = [];
                         }
-                    } catch (\Exception $e) {
-                        Log::error('Failed to send tutor assignment SMS', ['book_id' => $booking->book_id, 'error' => $e->getMessage()]);
+                    }
+
+                    // Get tutor IDs from booking
+                    $tutorIds = $booking->tutor_ids;
+                    if (is_string($tutorIds)) {
+                        $tutorIds = json_decode($tutorIds, true) ?? [];
+                    }
+
+                    $sessionCount = $booking->session_count;
+                    $startDate = $booking->book_date instanceof \Carbon\Carbon ? $booking->book_date->copy() : \Carbon\Carbon::parse($booking->book_date);
+                    $sessionsCreated = 0;
+                    $currentDate = $startDate->copy();
+                    $dayNames = array_map('strtolower', $days);
+
+                    while ($sessionsCreated < $sessionCount) {
+                        if (in_array(strtolower($currentDate->format('l')), $dayNames)) {
+                            $session = new \App\Models\BookingSession([
+                                'session_id' => 'SESS_' . strtoupper(\Illuminate\Support\Str::random(6)),
+                                'book_id' => $booking->book_id,
+                                'session_date' => $currentDate->toDateString(),
+                                'status' => \App\Models\BookingSession::STATUS_PENDING,
+                            ]);
+                            $session->save();
+
+                            // Attach tutors from booking to this session
+                            if (!empty($tutorIds) && is_array($tutorIds)) {
+                                $session->tutors()->attach($tutorIds);
+                            }
+
+                            $sessionsCreated++;
+                        }
+                        $currentDate->addDay();
+                    }
+                }
+
+                // Notify assigned tutor(s) about the lectures
+                $tutorIds = $booking->tutor_ids;
+                if (is_string($tutorIds)) {
+                    $tutorIds = json_decode($tutorIds, true) ?? [];
+                }
+
+                if (!empty($tutorIds) && is_array($tutorIds)) {
+                    $tutors = Tutor::with('user')->whereIn('tutor_id', $tutorIds)->get();
+                    $lectures = Lecture::where('book_id', $booking->book_id)->get();
+
+                    foreach ($tutors as $tutor) {
+                        foreach ($lectures as $lecture) {
+                            $tutor->user->notify(new InAppNotification(
+                                title: 'New Lecture Assignment',
+                                message: 'You have been assigned to teach "' . $lecture->name . '" (' . $booking->learner?->name . ')',
+                                type: 'info'
+                            ));
+                        }
+
+                        // Send SMS to tutor
+                        try {
+                            $phone = $tutor->user->routeNotificationForSms();
+                            if (!empty($phone)) {
+                                $smsMessage = "ACADENCH + SORAYA LEARNING HUB - New Lecture Assignment\nYou have been assigned to teach for booking ID: {$booking->book_id}. Please check your dashboard.";
+                                $this->smsService->send($phone, $smsMessage, $tutor->number ?? null);
+                                Log::info('Sent tutor assignment SMS', ['book_id' => $booking->book_id, 'tutor' => $tutor->tutor_id, 'phone' => $phone]);
+                            }
+                        } catch (\Exception $e) {
+                            Log::error('Failed to send tutor assignment SMS', ['book_id' => $booking->book_id, 'error' => $e->getMessage()]);
+                        }
                     }
                 }
             }
@@ -153,7 +210,6 @@ class AdminBookingController extends Controller
         if ($request->has('booking_status') && $request->booking_status) {
             $booking->booking_status = $request->booking_status;
 
-            // Set lecture is_active to false if booking is completed
             if ($request->booking_status === 'completed') {
                 Lecture::where('book_id', $booking->book_id)->update(['is_active' => false]);
             }

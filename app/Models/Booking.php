@@ -24,7 +24,7 @@ class Booking extends Model
         'parent_id',
         'learner_id',
         'prog_id',
-        'tutor_id',
+        'tutor_ids',
         'book_date',
         'session_count',
         'status',
@@ -39,6 +39,7 @@ class Booking extends Model
         'book_date' => 'date',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'tutor_ids' => 'array',
     ];
 
     protected static function booted(): void
@@ -78,9 +79,12 @@ class Booking extends Model
         return $this->belongsTo(Program::class, 'prog_id', 'prog_id');
     }
 
-    public function tutor(): BelongsTo
+    /**
+     * Get the tutors assigned to this booking (many-to-many).
+     */
+    public function tutors()
     {
-        return $this->belongsTo(Tutor::class, 'tutor_id', 'tutor_id');
+        return $this->belongsToMany(Tutor::class, 'booking_tutor', 'book_id', 'tutor_id');
     }
 
     public function receipts(): HasMany
@@ -96,5 +100,13 @@ class Booking extends Model
     public function refundRequests(): HasMany
     {
         return $this->hasMany(RefundRequest::class, 'book_id', 'book_id');
+    }
+
+    /**
+     * Get the sessions for this booking.
+     */
+    public function sessions(): HasMany
+    {
+        return $this->hasMany(BookingSession::class, 'book_id', 'book_id');
     }
 }

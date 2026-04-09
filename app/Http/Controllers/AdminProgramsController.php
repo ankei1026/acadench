@@ -45,6 +45,7 @@ class AdminProgramsController extends Controller
             'price' => 'required|numeric|min:0',
             'session_count' => 'required|integer|min:1',
             'setting' => 'required|in:hub,online',
+            'tutor_capacity' => 'required|integer|min:1',
         ]);
 
         // Convert days array to JSON
@@ -93,6 +94,7 @@ class AdminProgramsController extends Controller
             'price' => 'required|numeric|min:0',
             'session_count' => 'required|integer|min:1',
             'setting' => 'required|in:hub,online',
+            'tutor_capacity' => 'required|integer|min:1',
         ]);
 
         // Convert days array to JSON

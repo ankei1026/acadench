@@ -23,6 +23,7 @@ interface Program {
     setting?: string;
     created_at?: string;
     updated_at?: string;
+    tutor_capacity?: number; // Add tutor_capacity
 }
 
 interface ShowProgramProps {
@@ -268,6 +269,18 @@ export default function ShowProgram({ program }: ShowProgramProps) {
                                     <h4 className="text-sm font-medium text-muted-foreground">Total Program Cost</h4>
                                     <p className="text-2xl font-bold text-green-600">{formatPrice(program.price * program.session_count)}</p>
                                 </div>
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <Users className="h-5 w-5" />
+                                    Tutor Capacity
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-lg font-semibold">{program.tutor_capacity ?? 'N/A'} tutors</div>
                             </CardContent>
                         </Card>
                     </div>
